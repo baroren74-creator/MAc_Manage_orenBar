@@ -1,42 +1,62 @@
 <!DOCTYPE html>
-<html lang="he">
+<html lang="he" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ניהול הזמנות מקדונלד'ס – סנכרון מתמשך</title>
+  <meta charset="UTF-8" />
+  <title>ניהול והצטרפות להזמנות</title>
   <style>
     body {
-      font-family: sans-serif;
-      direction: rtl;
-      margin: 20px;
+      font-family: Arial, sans-serif;
       background-color: #f8f8f8;
+      color: #333;
+      margin: 0;
+      padding: 0;
     }
-    h1, h2 {
+    header {
+      background-color: #ffcc00;
+      color: #000;
+      padding: 20px;
       text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+    }
+    main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #fff;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      border-radius: 8px;
+    }
+    h2 {
+      margin-top: 0;
+    }
+    .hidden {
+      display: none;
     }
     label {
       display: block;
-      margin-top: 8px;
+      margin: 8px 0 4px;
     }
-    input, textarea {
+    input[type="text"], input[type="tel"], input[type="url"] {
       width: 100%;
       padding: 8px;
-      margin-top: 4px;
-      box-sizing: border-box;
       border: 1px solid #ccc;
       border-radius: 4px;
+      box-sizing: border-box;
     }
     button {
-      padding: 10px 20px;
-      margin-top: 12px;
-      background-color: #007bff;
-      color: white;
+      background-color: #ffcc00;
       border: none;
-      border-radius: 4px;
+      color: #000;
+      padding: 10px 20px;
+      margin-top: 15px;
+      font-size: 16px;
       cursor: pointer;
+      border-radius: 4px;
     }
-    button:hover {
-      background-color: #0056b3;
+    button:disabled {
+      background-color: #ddd;
+      cursor: not-allowed;
     }
     table {
       width: 100%;
@@ -49,28 +69,98 @@
       text-align: right;
     }
     th {
-      background-color: #eee;
+      background-color: #f0f0f0;
     }
-    .card {
-      background-color: #fff;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      margin-bottom: 20px;
+    #menuContainer {
+      margin-top: 15px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      height: 400px;
+      overflow-y: auto;
+    }
+    #menuFrame {
+      width: 100%;
+      height: 400px;
+      border: none;
+    }
+    .message {
+      margin-top: 20px;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .success {
+      background-color: #e0ffe0;
+      border: 1px solid #90ee90;
+    }
+    .error {
+      background-color: #ffe0e0;
+      border: 1px solid #ee9090;
     }
   </style>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-    import {
-      getDatabase,
-      ref,
-      push,
-      set,
-      onChildAdded,
-      onValue
-    } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
+</head>
+<body>
+  <header>הזמנות מקדונלד'ס - יצירת הזמנה והצטרפות</header>
+  <main>
+    <!-- Manager container -->
+    <div id="managerContainer" class="hidden">
+      <h2>פתיחת הזמנה חדשה</h2>
+      <p>הזן את פרטיך כמנהל ההזמנה והזמנה חדשה תיווצר. תקבל קישור לשיתוף עם המשתתפים.</p>
+      <form id="createForm">
+        <label for="managerName">שם מנהל:</label>
+        <input type="text" id="managerName" required />
+        <label for="managerPhone">טלפון:</label>
+        <input type="tel" id="managerPhone" required />
+        <label for="payLink">קישור לתשלום (אופציונלי):</label>
+        <input type="url" id="payLink" />
+        <button type="submit">פתח הזמנה</button>
+      </form>
+      <div id="orderInfo" class="hidden">
+        <h3>פרטי הזמנה</h3>
+        <p>קישור להזמנה לשיתוף עם משתתפים:</p>
+        <input type="text" id="shareLink" readonly style="width:100%;" />
+        <button id="copyLinkBtn">העתק קישור</button>
+        <h3>משתתפים</h3>
+        <table id="participantsTable">
+          <thead>
+            <tr>
+              <th>שם</th>
+              <th>פריטים</th>
+              <th>סה"כ (₪)</th>
+              <th>הערות</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div id="managerMessage" class="message hidden"></div>
+      </div>
+    </div>
+    <!-- Joiner container -->
+    <div id="joinContainer" class="hidden">
+      <h2>הצטרפות להזמנה</h2>
+      <p>הזן את פרטיך ובחר מהתפריט כדי להצטרף להזמנה זו.</p>
+      <div id="joinFormContainer">
+        <label for="guestName">שם:</label>
+        <input type="text" id="guestName" required />
+        <label for="guestPhone">טלפון:</label>
+        <input type="tel" id="guestPhone" />
+        <label>הערות להזמנה (אופציונלי):</label>
+        <input type="text" id="guestNotes" />
+        <button id="openMenuBtn">פתח תפריט</button>
+        <div id="menuContainer" class="hidden">
+          <iframe id="menuFrame" src="mc_menu.html"></iframe>
+        </div>
+        <button id="addOrderBtn" disabled>הוסף הזמנה</button>
+      </div>
+      <div id="joinMessage" class="message hidden"></div>
+    </div>
+  </main>
 
-    // הגדרות Firebase – החליפו לערכים של הפרויקט שלכם אם נדרש
+  <!-- Firebase & application logic -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
+    import { getFirestore, collection, doc, setDoc, addDoc, getDoc, onSnapshot, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';
+
+    // TODO: Replace with your Firebase project configuration
     const firebaseConfig = {
       apiKey: "AIzaSyBF5lnU86OrzvlcHKNUf0h-2txKLgC5IJo",
       authDomain: "mcd-office-orders.firebaseapp.com",
@@ -81,231 +171,201 @@
       appId: "1:10595740776:web:e59ad7fdbab2f93079dfdd",
       measurementId: "G-XTXX1Q6Y1W"
     };
-
-    // אתחול Firebase
     const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+    const db = getFirestore(app);
 
-    // משתנה לניהול מזהה ההזמנה הנוכחית
-    let currentOrderId = null;
+    // Elements
+    const managerContainer = document.getElementById('managerContainer');
+    const joinContainer = document.getElementById('joinContainer');
+    const createForm = document.getElementById('createForm');
+    const managerNameInput = document.getElementById('managerName');
+    const managerPhoneInput = document.getElementById('managerPhone');
+    const payLinkInput = document.getElementById('payLink');
+    const orderInfo = document.getElementById('orderInfo');
+    const shareLinkInput = document.getElementById('shareLink');
+    const copyLinkBtn = document.getElementById('copyLinkBtn');
+    const participantsTableBody = document.querySelector('#participantsTable tbody');
+    const managerMessage = document.getElementById('managerMessage');
+    const joinFormContainer = document.getElementById('joinFormContainer');
+    const guestNameInput = document.getElementById('guestName');
+    const guestPhoneInput = document.getElementById('guestPhone');
+    const guestNotesInput = document.getElementById('guestNotes');
+    const openMenuBtn = document.getElementById('openMenuBtn');
+    const menuContainer = document.getElementById('menuContainer');
+    const menuFrame = document.getElementById('menuFrame');
+    const addOrderBtn = document.getElementById('addOrderBtn');
+    const joinMessage = document.getElementById('joinMessage');
 
-    /**
-     * אתחול העמוד:
-     * - אם יש פרמטר orderId בכתובת – מצב מצטרף.
-     * - אחרת אם יש orderId בשמירת הדפדפן – מצב מנהל קיים.
-     * - אחרת – הצגת טופס פתיחת הזמנה חדשה.
-     */
-    window.addEventListener('DOMContentLoaded', () => {
-      const params = new URLSearchParams(window.location.search);
-      const orderParam = params.get('orderId');
-      if (orderParam) {
-        // מצטרף להזמנה
-        currentOrderId = orderParam;
-        document.getElementById('managerCard').style.display = 'none';
-        document.getElementById('joinCard').style.display = 'block';
-        document.getElementById('joinButton').addEventListener('click', submitJoinForm);
-      } else {
-        // מצב מנהל – בדיקה אם קיימת הזמנה פתוחה בדפדפן
-        const savedOrder = localStorage.getItem('managerOrderId');
-        if (savedOrder) {
-          currentOrderId = savedOrder;
-          // טען את סיכום ההזמנה והאזנה למצטרפים
-          showOrderSummary();
-          listenForParticipants(currentOrderId);
-        }
-      }
-    });
+    // Parse query parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const orderParam = urlParams.get('order');
 
-    /**
-     * פתיחת הזמנה חדשה ע"י המנהל
-     */
-    window.openOrder = function openOrder() {
-      const name = document.getElementById('managerName').value.trim();
-      const phone = document.getElementById('managerPhone').value.trim();
-      const link = document.getElementById('paymentLink').value.trim();
-      if (!name) {
-        alert('יש להזין שם מנהל');
-        return;
-      }
-      // יצירת רשומה חדשה בהזמנות
-      const orderRef = push(ref(db, 'orders'));
-      currentOrderId = orderRef.key;
-      // שמירת מזהה ההזמנה לשימוש עתידי
-      localStorage.setItem('managerOrderId', currentOrderId);
-      // שמירת פרטי ההזמנה במסד הנתונים
-      set(ref(db, `orders/${currentOrderId}/details`), {
-        managerName: name,
-        managerPhone: phone,
-        paymentLink: link || '',
-        createdAt: new Date().toISOString(),
-        status: 'open'
-      }).then(() => {
-        showOrderSummary();
-        listenForParticipants(currentOrderId);
-      });
-    };
-
-    /**
-     * הצגת תקציר ההזמנה והקישור להצטרפות
-     */
-    function showOrderSummary() {
-      document.getElementById('managerCard').style.display = 'none';
-      document.getElementById('orderCard').style.display = 'block';
-      // הצגת הקישור להצטרפות למשתתפים אחרים
-      const joinUrl =
-        `${window.location.origin}${window.location.pathname}?orderId=${currentOrderId}`;
-      document.getElementById('joinLinkContainer').innerHTML =
-        `<a href="${joinUrl}" target="_blank">${joinUrl}</a>`;
+    if (orderParam) {
+      // Joiner mode
+      showJoinPage(orderParam);
+    } else {
+      // Manager mode
+      showManagerPage();
     }
 
     /**
-     * מאזין להוספת מצטרפים ולחישוב סכום כולל
+     * Show the manager page UI
+     */
+    function showManagerPage() {
+      managerContainer.classList.remove('hidden');
+      // Handle order creation
+      createForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = managerNameInput.value.trim();
+        const phone = managerPhoneInput.value.trim();
+        const payLink = payLinkInput.value.trim();
+        if (!name) return;
+        try {
+          // Generate new order document
+          const orderRef = doc(collection(db, 'orders'));
+          const orderId = orderRef.id;
+          await setDoc(orderRef, {
+            managerName: name,
+            managerPhone: phone,
+            payLink: payLink || '',
+            status: 'open',
+            createdAt: serverTimestamp()
+          });
+          // Update UI
+          orderInfo.classList.remove('hidden');
+          const joinLink = window.location.origin + window.location.pathname + '?order=' + orderId;
+          shareLinkInput.value = joinLink;
+          // Copy functionality
+          copyLinkBtn.onclick = () => {
+            navigator.clipboard.writeText(joinLink);
+            alert('קישור הועתק ללוח');
+          };
+          // Listen for participant updates
+          listenForParticipants(orderId);
+        } catch (err) {
+          managerMessage.className = 'message error';
+          managerMessage.textContent = 'אירעה שגיאה ביצירת ההזמנה. אנא נסה שוב.';
+          managerMessage.classList.remove('hidden');
+        }
+      });
+    }
+
+    /**
+     * Real-time listener for participants
+     * @param {string} orderId 
      */
     function listenForParticipants(orderId) {
-      const participantsRef = ref(db, `orders/${orderId}/participants`);
-      // כל מצטרף חדש
-      onChildAdded(participantsRef, (snapshot) => {
-        const data = snapshot.val();
-        if (data) {
-          addParticipantRow(snapshot.key, data);
+      const participantsCol = collection(db, 'orders', orderId, 'participants');
+      onSnapshot(participantsCol, (snapshot) => {
+        // Clear current rows
+        participantsTableBody.innerHTML = '';
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          const tr = document.createElement('tr');
+          const itemsList = (data.items || []).join(', ');
+          tr.innerHTML = `
+            <td>${data.name}</td>
+            <td>${itemsList}</td>
+            <td>${data.total?.toFixed(2) || ''}</td>
+            <td>${data.notes || ''}</td>
+          `;
+          participantsTableBody.appendChild(tr);
+        });
+      });
+    }
+
+    /**
+     * Show the join page UI
+     * @param {string} orderId 
+     */
+    async function showJoinPage(orderId) {
+      joinContainer.classList.remove('hidden');
+      // Validate order exists and is open
+      const orderRef = doc(db, 'orders', orderId);
+      const orderSnap = await getDoc(orderRef);
+      if (!orderSnap.exists()) {
+        displayJoinError('לא נמצאה הזמנה. אולי הקישור שגוי או שההזמנה נסגרה.');
+        return;
+      }
+      const orderData = orderSnap.data();
+      if (orderData.status === 'closed') {
+        displayJoinError('ההזמנה נסגרה ולא ניתן להצטרף אליה.');
+        return;
+      }
+      // Set up menu button
+      openMenuBtn.addEventListener('click', () => {
+        // Toggle visibility of menu
+        menuContainer.classList.toggle('hidden');
+        // Enable add order button once menu is opened
+        if (!menuContainer.classList.contains('hidden')) {
+          addOrderBtn.disabled = false;
         }
       });
-      // חישוב סכום כולל בזמן אמת
-      onValue(participantsRef, (snapshot) => {
-        let total = 0;
-        snapshot.forEach(child => {
-          const val = child.val();
-          total += parseFloat(val.total || 0);
-        });
-        document.getElementById('summaryTotal').textContent =
-          total.toFixed(2) + ' ₪';
-      });
-    }
-
-    /**
-     * הוספת שורה לטבלת מצטרפים במסך המנהל
-     */
-    function addParticipantRow(id, data) {
-      const tableBody = document.getElementById('participantsBody');
-      // בדיקה אם כבר קיימת שורה עם אותו ID (למניעת כפילויות בריענון הדף)
-      if (document.getElementById(id)) {
-        return;
-      }
-      const row = document.createElement('tr');
-      row.id = id;
-      const itemsStr = Array.isArray(data.items)
-        ? data.items.map(i => `${i.name} ×${i.qty}`).join(', ')
-        : (data.items || '');
-      row.innerHTML = `
-        <td>${data.restaurant || ''}</td>
-        <td>${data.name || ''}</td>
-        <td>${data.phone || ''}</td>
-        <td>${itemsStr}</td>
-        <td>${data.total || 0}</td>
-        <td>${data.note || ''}</td>
-      `;
-      tableBody.appendChild(row);
-    }
-
-    /**
-     * שליחת טופס הצטרפות להזמנה
-     */
-    function submitJoinForm() {
-      const name = document.getElementById('clientName').value.trim();
-      const phone = document.getElementById('clientPhone').value.trim();
-      const itemsText = document.getElementById('orderItems').value.trim();
-      const note = document.getElementById('clientNote').value.trim();
-      if (!name) {
-        alert('יש להזין שם');
-        return;
-      }
-      // פירוק שורות לרשימת מנות
-      const items = [];
-      if (itemsText) {
-        itemsText.split(/\n+/).forEach(line => {
-          const trimmed = line.trim();
-          if (trimmed) {
-            items.push({ name: trimmed, qty: 1 });
+      // Add order event
+      addOrderBtn.addEventListener('click', async () => {
+        const guestName = guestNameInput.value.trim();
+        const guestPhone = guestPhoneInput.value.trim();
+        const notes = guestNotesInput.value.trim();
+        if (!guestName) {
+          displayJoinError('יש להזין שם.');
+          return;
+        }
+        try {
+          // Extract selected items from iframe
+          const { items, total } = getSelectedItemsFromMenu();
+          if (items.length === 0) {
+            displayJoinError('אנא בחר לפחות פריט אחד מהתפריט.');
+            return;
           }
-        });
-      }
-      const total = 0; // ניתן לשנות לפי מחירים
-      push(ref(db, `orders/${currentOrderId}/participants`), {
-        name: name,
-        phone: phone,
-        restaurant: '',
-        items: items,
-        total: total,
-        note: note
-      }).then(() => {
-        document.getElementById('joinCard').innerHTML =
-          '<p>ההזמנה נשלחה! תודה 😊</p>';
+          // Add participant document
+          const participantRef = collection(db, 'orders', orderId, 'participants');
+          await addDoc(participantRef, {
+            name: guestName,
+            phone: guestPhone || '',
+            items: items,
+            total: total,
+            notes: notes || '',
+            createdAt: serverTimestamp()
+          });
+          joinFormContainer.classList.add('hidden');
+          joinMessage.className = 'message success';
+          joinMessage.textContent = 'ההזמנה נוספה בהצלחה! תודה שהצטרפת.';
+          joinMessage.classList.remove('hidden');
+        } catch (err) {
+          displayJoinError('אירעה שגיאה בהוספת ההזמנה. אנא נסה שוב.');
+        }
       });
     }
 
     /**
-     * סגירת הזמנה קיימת (מנקה את הנתונים והאחסון המקומי)
+     * Read selected items and total price from the menu iframe
      */
-    window.closeOrder = function closeOrder() {
-      if (!currentOrderId) return;
-      // עדכון סטטוס במסד הנתונים
-      set(ref(db, `orders/${currentOrderId}/details/status`), 'closed');
-      localStorage.removeItem('managerOrderId');
-      // רענון הדף למסך פתיחת הזמנה
-      window.location.href = window.location.pathname;
-    };
+    function getSelectedItemsFromMenu() {
+      const items = [];
+      let total = 0;
+      try {
+        const doc = menuFrame.contentDocument || menuFrame.contentWindow.document;
+        const checkedBoxes = doc.querySelectorAll('input[type="checkbox"]:checked');
+        checkedBoxes.forEach((cb) => {
+          const value = cb.value;
+          const price = parseFloat(cb.getAttribute('data-price') || '0');
+          items.push(value);
+          total += price;
+        });
+      } catch (err) {
+        console.error('Cannot access menu frame:', err);
+      }
+      return { items, total };
+    }
+
+    /**
+     * Display an error message in the join page
+     */
+    function displayJoinError(msg) {
+      joinMessage.className = 'message error';
+      joinMessage.textContent = msg;
+      joinMessage.classList.remove('hidden');
+    }
   </script>
-</head>
-<body>
-  <h1>הזמנות מקדונלד'ס – ניהול בזמן אמת</h1>
-
-  <!-- כרטיס פתיחת הזמנה (מנהל) -->
-  <div id="managerCard" class="card">
-    <h2>פתיחת הזמנה חדשה</h2>
-    <label for="managerName">שם מנהל</label>
-    <input id="managerName" type="text" placeholder="למשל: אורן" required>
-    <label for="managerPhone">טלפון מנהל</label>
-    <input id="managerPhone" type="tel" placeholder="לדוגמה: 050-1234567">
-    <label for="paymentLink">קישור לתשלום (אופציונלי)</label>
-    <input id="paymentLink" type="url" placeholder="קישור ביט / פייבוקס">
-    <button onclick="openOrder()">פתח הזמנה</button>
-  </div>
-
-  <!-- כרטיס סיכום הזמנה (מנהל) -->
-  <div id="orderCard" class="card" style="display: none;">
-    <h2>הזמנה פעילה</h2>
-    <p>העתיקו ושלחו את הקישור הבא לחברים כדי שיצטרפו להזמנה:</p>
-    <p id="joinLinkContainer"></p>
-    <table>
-      <thead>
-        <tr>
-          <th>מסעדה</th>
-          <th>שם</th>
-          <th>טלפון</th>
-          <th>מוצרים</th>
-          <th>סכום</th>
-          <th>הערה</th>
-        </tr>
-      </thead>
-      <tbody id="participantsBody">
-      </tbody>
-    </table>
-    <p><strong>סכום כולל:</strong> <span id="summaryTotal">0 ₪</span></p>
-    <button onclick="closeOrder()">סגור הזמנה</button>
-  </div>
-
-  <!-- כרטיס הצטרפות להזמנה (מצטרף) -->
-  <div id="joinCard" class="card" style="display: none;">
-    <h2>הצטרפות להזמנה</h2>
-    <label for="clientName">שם</label>
-    <input id="clientName" type="text" placeholder="השם שלך" required>
-    <label for="clientPhone">טלפון</label>
-    <input id="clientPhone" type="tel" placeholder="לדוגמה: 050-1234567">
-    <label for="orderItems">פרטי הזמנה (שורה חדשה לכל מוצר)</label>
-    <textarea id="orderItems" rows="4" placeholder="צ'יפס\nצ'יקן מקנאגטס\nשתייה קלה"></textarea>
-    <label for="clientNote">הערה</label>
-    <textarea id="clientNote" rows="2" placeholder="הערה לשליח או למנהל"></textarea>
-    <button id="joinButton">שלח הזמנה</button>
-  </div>
 </body>
 </html>
