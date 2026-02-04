@@ -1,166 +1,25 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <title>ניהול והצטרפות להזמנות</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f8f8f8;
-      color: #333;
-      margin: 0;
-      padding: 0;
-    }
-    header {
-      background-color: #ffcc00;
-      color: #000;
-      padding: 20px;
-      text-align: center;
-      font-size: 24px;
-      font-weight: bold;
-    }
-    main {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 20px;
-      background: #fff;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      border-radius: 8px;
-    }
-    h2 {
-      margin-top: 0;
-    }
-    .hidden {
-      display: none;
-    }
-    label {
-      display: block;
-      margin: 8px 0 4px;
-    }
-    input[type="text"], input[type="tel"], input[type="url"] {
-      width: 100%;
-      padding: 8px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      box-sizing: border-box;
-    }
-    button {
-      background-color: #ffcc00;
-      border: none;
-      color: #000;
-      padding: 10px 20px;
-      margin-top: 15px;
-      font-size: 16px;
-      cursor: pointer;
-      border-radius: 4px;
-    }
-    button:disabled {
-      background-color: #ddd;
-      cursor: not-allowed;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 8px;
-      text-align: right;
-    }
-    th {
-      background-color: #f0f0f0;
-    }
-    #menuContainer {
-      margin-top: 15px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      height: 400px;
-      overflow-y: auto;
-    }
-    #menuFrame {
-      width: 100%;
-      height: 400px;
-      border: none;
-    }
-    .message {
-      margin-top: 20px;
-      padding: 10px;
-      border-radius: 4px;
-    }
-    .success {
-      background-color: #e0ffe0;
-      border: 1px solid #90ee90;
-    }
-    .error {
-      background-color: #ffe0e0;
-      border: 1px solid #ee9090;
-    }
-  </style>
-</head>
-<body>
-  <header>הזמנות מקדונלד'ס - יצירת הזמנה והצטרפות</header>
-  <main>
-    <!-- Manager container -->
-    <div id="managerContainer" class="hidden">
-      <h2>פתיחת הזמנה חדשה</h2>
-      <p>הזן את פרטיך כמנהל ההזמנה והזמנה חדשה תיווצר. תקבל קישור לשיתוף עם המשתתפים.</p>
-      <form id="createForm">
-        <label for="managerName">שם מנהל:</label>
-        <input type="text" id="managerName" required />
-        <label for="managerPhone">טלפון:</label>
-        <input type="tel" id="managerPhone" required />
-        <label for="payLink">קישור לתשלום (אופציונלי):</label>
-        <input type="url" id="payLink" />
-        <button type="submit">פתח הזמנה</button>
-      </form>
-      <div id="orderInfo" class="hidden">
-        <h3>פרטי הזמנה</h3>
-        <p>קישור להזמנה לשיתוף עם משתתפים:</p>
-        <input type="text" id="shareLink" readonly style="width:100%;" />
-        <button id="copyLinkBtn">העתק קישור</button>
-        <h3>משתתפים</h3>
-        <table id="participantsTable">
-          <thead>
-            <tr>
-              <th>שם</th>
-              <th>פריטים</th>
-              <th>סה"כ (₪)</th>
-              <th>הערות</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-        <div id="managerMessage" class="message hidden"></div>
-      </div>
-    </div>
-    <!-- Joiner container -->
-    <div id="joinContainer" class="hidden">
-      <h2>הצטרפות להזמנה</h2>
-      <p>הזן את פרטיך ובחר מהתפריט כדי להצטרף להזמנה זו.</p>
-      <div id="joinFormContainer">
-        <label for="guestName">שם:</label>
-        <input type="text" id="guestName" required />
-        <label for="guestPhone">טלפון:</label>
-        <input type="tel" id="guestPhone" />
-        <label>הערות להזמנה (אופציונלי):</label>
-        <input type="text" id="guestNotes" />
-        <button id="openMenuBtn">פתח תפריט</button>
-        <div id="menuContainer" class="hidden">
-          <iframe id="menuFrame" src="mc_menu.html"></iframe>
-        </div>
-        <button id="addOrderBtn" disabled>הוסף הזמנה</button>
-      </div>
-      <div id="joinMessage" class="message hidden"></div>
-    </div>
-  </main>
-
-  <!-- Firebase & application logic -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ניהול הזמנות - Office McDonald's</title>
+  <!-- Firebase configuration and SDKs -->
   <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
-    import { getFirestore, collection, doc, setDoc, addDoc, getDoc, onSnapshot, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';
+    // Import Firebase functions
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+    import {
+      getFirestore,
+      doc,
+      setDoc,
+      collection,
+      addDoc,
+      getDoc,
+      onSnapshot,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
-    // TODO: Replace with your Firebase project configuration
+    // Your Firebase config (same as provided by the user)
     const firebaseConfig = {
       apiKey: "AIzaSyBF5lnU86OrzvlcHKNUf0h-2txKLgC5IJo",
       authDomain: "mcd-office-orders.firebaseapp.com",
@@ -171,93 +30,260 @@
       appId: "1:10595740776:web:e59ad7fdbab2f93079dfdd",
       measurementId: "G-XTXX1Q6Y1W"
     };
+    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Elements
-    const managerContainer = document.getElementById('managerContainer');
-    const joinContainer = document.getElementById('joinContainer');
-    const createForm = document.getElementById('createForm');
-    const managerNameInput = document.getElementById('managerName');
-    const managerPhoneInput = document.getElementById('managerPhone');
-    const payLinkInput = document.getElementById('payLink');
-    const orderInfo = document.getElementById('orderInfo');
-    const shareLinkInput = document.getElementById('shareLink');
-    const copyLinkBtn = document.getElementById('copyLinkBtn');
-    const participantsTableBody = document.querySelector('#participantsTable tbody');
-    const managerMessage = document.getElementById('managerMessage');
-    const joinFormContainer = document.getElementById('joinFormContainer');
-    const guestNameInput = document.getElementById('guestName');
-    const guestPhoneInput = document.getElementById('guestPhone');
-    const guestNotesInput = document.getElementById('guestNotes');
-    const openMenuBtn = document.getElementById('openMenuBtn');
-    const menuContainer = document.getElementById('menuContainer');
-    const menuFrame = document.getElementById('menuFrame');
-    const addOrderBtn = document.getElementById('addOrderBtn');
-    const joinMessage = document.getElementById('joinMessage');
-
-    // Parse query parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    const orderParam = urlParams.get('order');
-
-    if (orderParam) {
-      // Joiner mode
-      showJoinPage(orderParam);
-    } else {
-      // Manager mode
-      showManagerPage();
+    // After Firebase is ready we can run our application code in the next script tag
+  </script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-image: url('bg.webp');
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-position: center;
+      color: #333;
     }
 
+    h1 {
+      text-align: center;
+      padding: 20px 0;
+      margin: 0;
+      color: #b71c1c;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: rgba(255, 255, 255, 0.9);
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    label {
+      display: block;
+      margin-top: 10px;
+    }
+
+    input[type="text"], input[type="tel"], input[type="url"], textarea {
+      width: 100%;
+      padding: 8px;
+      margin-top: 4px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    textarea {
+      resize: vertical;
+    }
+
+    button {
+      padding: 10px 20px;
+      margin-top: 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      background-color: #d32f2f;
+      color: #fff;
+      font-size: 16px;
+    }
+
+    button:disabled {
+      background-color: #aaa;
+      cursor: not-allowed;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: center;
+    }
+
+    th {
+      background-color: #f5f5f5;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .message {
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 4px;
+    }
+
+    .error {
+      background-color: #ffcdd2;
+      color: #b71c1c;
+    }
+
+    .success {
+      background-color: #c8e6c9;
+      color: #2e7d32;
+    }
+
+    /* Join page specific */
+    #join-section {
+      text-align: center;
+    }
+
+    #join-section h2 {
+      margin-top: 0;
+    }
+
+    #menu-frame {
+      width: 100%;
+      height: 400px;
+      border: 1px solid #ccc;
+      margin-top: 10px;
+    }
+
+    .flex-row {
+      display: flex;
+      align-items: center;
+    }
+
+    .flex-row input[type="text"] {
+      flex: 1;
+      margin-left: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>ניהול הזמנות מקדונלד'ס</h1>
+  <div class="container" id="manager-section" class="hidden">
+    <div id="create-section">
+      <h2>יצירת הזמנה חדשה</h2>
+      <form id="create-order-form">
+        <label for="manager-name">שם מנהל:</label>
+        <input type="text" id="manager-name" required />
+        <label for="manager-phone">טלפון מנהל (לא חובה):</label>
+        <input type="tel" id="manager-phone" />
+        <label for="pay-link">קישור לתשלום (לא חובה):</label>
+        <input type="url" id="pay-link" />
+        <button type="submit">צור הזמנה</button>
+      </form>
+    </div>
+    <div id="order-info" class="hidden">
+      <h2>פרטי הזמנה</h2>
+      <label>קישור לשיתוף:</label>
+      <div class="flex-row">
+        <input id="share-link-input" type="text" readonly />
+        <button id="copy-link-button" type="button">העתק</button>
+      </div>
+      <p>משתתפים שהצטרפו:</p>
+      <table id="participants-table">
+        <thead>
+          <tr>
+            <th>שם</th>
+            <th>פריטים</th>
+            <th>סה"כ</th>
+            <th>הערות</th>
+          </tr>
+        </thead>
+        <tbody id="participants-table-body"></tbody>
+      </table>
+    </div>
+    <p id="manager-message" class="message hidden"></p>
+  </div>
+
+  <div class="container hidden" id="join-section">
+    <h2>הצטרפות להזמנה</h2>
+    <div id="join-form-container">
+      <label for="guest-name">שם מלא:</label>
+      <input type="text" id="guest-name" required />
+      <label for="guest-phone">טלפון (לא חובה):</label>
+      <input type="tel" id="guest-phone" />
+      <label for="guest-notes">הערות (לא חובה):</label>
+      <textarea id="guest-notes"></textarea>
+      <button id="open-menu-button">פתח תפריט</button>
+      <iframe id="menu-frame" src="mc_menu.html" class="hidden"></iframe>
+      <button id="add-order-button" class="hidden">הוסף הזמנה</button>
+    </div>
+    <p id="join-message" class="message hidden"></p>
+  </div>
+
+  <script type="module">
+    // The Firebase app is already initialized in the previous script. We just need to import Firestore functions again.
+    import {
+      getFirestore,
+      doc,
+      setDoc,
+      collection,
+      addDoc,
+      getDoc,
+      onSnapshot,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+    import { getAuth } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+
+    // Obtain Firestore instance
+    const db = getFirestore();
+
+    // DOM references
+    const managerSection = document.getElementById('manager-section');
+    const createSection = document.getElementById('create-section');
+    const createForm = document.getElementById('create-order-form');
+    const managerNameInput = document.getElementById('manager-name');
+    const managerPhoneInput = document.getElementById('manager-phone');
+    const payLinkInput = document.getElementById('pay-link');
+    const orderInfo = document.getElementById('order-info');
+    const shareLinkInput = document.getElementById('share-link-input');
+    const copyLinkBtn = document.getElementById('copy-link-button');
+    const participantsTableBody = document.getElementById('participants-table-body');
+    const managerMessage = document.getElementById('manager-message');
+
+    const joinSection = document.getElementById('join-section');
+    const guestNameInput = document.getElementById('guest-name');
+    const guestPhoneInput = document.getElementById('guest-phone');
+    const guestNotesInput = document.getElementById('guest-notes');
+    const openMenuBtn = document.getElementById('open-menu-button');
+    const menuFrame = document.getElementById('menu-frame');
+    const addOrderBtn = document.getElementById('add-order-button');
+    const joinFormContainer = document.getElementById('join-form-container');
+    const joinMessage = document.getElementById('join-message');
+
     /**
-     * Show the manager page UI
+     * Display a manager view for an existing order.
+     * Hides the create form and shows the participants table.
+     * @param {string} orderId
      */
-    function showManagerPage() {
-      managerContainer.classList.remove('hidden');
-      // Handle order creation
-      createForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const name = managerNameInput.value.trim();
-        const phone = managerPhoneInput.value.trim();
-        const payLink = payLinkInput.value.trim();
-        if (!name) return;
-        try {
-          // Generate new order document
-          const orderRef = doc(collection(db, 'orders'));
-          const orderId = orderRef.id;
-          await setDoc(orderRef, {
-            managerName: name,
-            managerPhone: phone,
-            payLink: payLink || '',
-            status: 'open',
-            createdAt: serverTimestamp()
-          });
-          // Update UI
-          orderInfo.classList.remove('hidden');
-          const joinLink = window.location.origin + window.location.pathname + '?order=' + orderId;
-          shareLinkInput.value = joinLink;
-          // Copy functionality
-          copyLinkBtn.onclick = () => {
-            navigator.clipboard.writeText(joinLink);
-            alert('קישור הועתק ללוח');
-          };
-          // Listen for participant updates
-          listenForParticipants(orderId);
-        } catch (err) {
-          managerMessage.className = 'message error';
-          managerMessage.textContent = 'אירעה שגיאה ביצירת ההזמנה. אנא נסה שוב.';
-          managerMessage.classList.remove('hidden');
-        }
-      });
+    function showExistingOrder(orderId) {
+      managerSection.classList.remove('hidden');
+      // Hide the create form since an order already exists
+      createSection.classList.add('hidden');
+      // Show order information section
+      orderInfo.classList.remove('hidden');
+      const joinLink = window.location.origin + window.location.pathname + '?order=' + orderId;
+      shareLinkInput.value = joinLink;
+      copyLinkBtn.onclick = () => {
+        navigator.clipboard.writeText(joinLink);
+        alert('קישור הועתק ללוח');
+      };
+      // Start listening for participants
+      listenForParticipants(orderId);
     }
 
     /**
-     * Real-time listener for participants
-     * @param {string} orderId 
+     * Listen for real-time updates of participants for a given order.
+     * @param {string} orderId
      */
     function listenForParticipants(orderId) {
       const participantsCol = collection(db, 'orders', orderId, 'participants');
       onSnapshot(participantsCol, (snapshot) => {
-        // Clear current rows
+        // Clear table
         participantsTableBody.innerHTML = '';
         snapshot.forEach((docSnap) => {
           const data = docSnap.data();
@@ -275,49 +301,76 @@
     }
 
     /**
-     * Show the join page UI
-     * @param {string} orderId 
+     * Show the manager page and allow creating a new order.
+     */
+    function showManagerPage() {
+      managerSection.classList.remove('hidden');
+      // Bind form submission
+      createForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = managerNameInput.value.trim();
+        const phone = managerPhoneInput.value.trim();
+        const payLink = payLinkInput.value.trim();
+        if (!name) return;
+        try {
+          const orderRef = doc(collection(db, 'orders'));
+          const orderId = orderRef.id;
+          await setDoc(orderRef, {
+            managerName: name,
+            managerPhone: phone || '',
+            payLink: payLink || '',
+            status: 'open',
+            createdAt: serverTimestamp()
+          });
+          // Persist the order ID locally so we can restore after refresh
+          localStorage.setItem('currentOrderId', orderId);
+          // Show the existing order instead of the create form
+          showExistingOrder(orderId);
+        } catch (err) {
+          managerMessage.className = 'message error';
+          managerMessage.textContent = 'אירעה שגיאה ביצירת ההזמנה. אנא נסה שוב.';
+          managerMessage.classList.remove('hidden');
+        }
+      }, { once: true });
+    }
+
+    /**
+     * Show the join page for participants.
+     * @param {string} orderId
      */
     async function showJoinPage(orderId) {
-      joinContainer.classList.remove('hidden');
-      // Validate order exists and is open
+      joinSection.classList.remove('hidden');
+      // Verify order exists and is open
       const orderRef = doc(db, 'orders', orderId);
       const orderSnap = await getDoc(orderRef);
       if (!orderSnap.exists()) {
-        displayJoinError('לא נמצאה הזמנה. אולי הקישור שגוי או שההזמנה נסגרה.');
-        return;
+        return displayJoinError('לא נמצאה הזמנה. ייתכן שהקישור שגוי או שההזמנה נסגרה.');
       }
       const orderData = orderSnap.data();
       if (orderData.status === 'closed') {
-        displayJoinError('ההזמנה נסגרה ולא ניתן להצטרף אליה.');
-        return;
+        return displayJoinError('ההזמנה נסגרה ולא ניתן להצטרף אליה.');
       }
-      // Set up menu button
+      // Handle opening of menu
       openMenuBtn.addEventListener('click', () => {
-        // Toggle visibility of menu
-        menuContainer.classList.toggle('hidden');
-        // Enable add order button once menu is opened
-        if (!menuContainer.classList.contains('hidden')) {
-          addOrderBtn.disabled = false;
+        menuFrame.classList.toggle('hidden');
+        // Show add button when menu visible
+        if (!menuFrame.classList.contains('hidden')) {
+          addOrderBtn.classList.remove('hidden');
         }
-      });
-      // Add order event
+      }, { once: true });
+      // Add participant
       addOrderBtn.addEventListener('click', async () => {
         const guestName = guestNameInput.value.trim();
         const guestPhone = guestPhoneInput.value.trim();
         const notes = guestNotesInput.value.trim();
         if (!guestName) {
-          displayJoinError('יש להזין שם.');
-          return;
+          return displayJoinError('יש להזין שם.');
         }
         try {
-          // Extract selected items from iframe
           const { items, total } = getSelectedItemsFromMenu();
           if (items.length === 0) {
-            displayJoinError('אנא בחר לפחות פריט אחד מהתפריט.');
-            return;
+            return displayJoinError('אנא בחר לפחות פריט אחד מהתפריט.');
           }
-          // Add participant document
           const participantRef = collection(db, 'orders', orderId, 'participants');
           await addDoc(participantRef, {
             name: guestName,
@@ -334,19 +387,19 @@
         } catch (err) {
           displayJoinError('אירעה שגיאה בהוספת ההזמנה. אנא נסה שוב.');
         }
-      });
+      }, { once: true });
     }
 
     /**
-     * Read selected items and total price from the menu iframe
+     * Read selected items and total from menu iframe.
      */
     function getSelectedItemsFromMenu() {
       const items = [];
       let total = 0;
       try {
-        const doc = menuFrame.contentDocument || menuFrame.contentWindow.document;
-        const checkedBoxes = doc.querySelectorAll('input[type="checkbox"]:checked');
-        checkedBoxes.forEach((cb) => {
+        const docMenu = menuFrame.contentDocument || menuFrame.contentWindow.document;
+        const checked = docMenu.querySelectorAll('input[type="checkbox"]:checked');
+        checked.forEach((cb) => {
           const value = cb.value;
           const price = parseFloat(cb.getAttribute('data-price') || '0');
           items.push(value);
@@ -359,12 +412,28 @@
     }
 
     /**
-     * Display an error message in the join page
+     * Display error on join page
      */
     function displayJoinError(msg) {
       joinMessage.className = 'message error';
       joinMessage.textContent = msg;
       joinMessage.classList.remove('hidden');
+    }
+
+    // Determine if we're in manager or joiner mode based on URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const orderParam = urlParams.get('order') || urlParams.get('orderId');
+    if (orderParam) {
+      // Joiner mode
+      showJoinPage(orderParam);
+    } else {
+      // Manager mode: check for existing order in local storage
+      const savedOrderId = localStorage.getItem('currentOrderId');
+      if (savedOrderId) {
+        showExistingOrder(savedOrderId);
+      } else {
+        showManagerPage();
+      }
     }
   </script>
 </body>
