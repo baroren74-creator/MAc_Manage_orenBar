@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta charset="UTF-8" />
   <title>מערכת הזמנת אוכל למשרד</title>
   <style>
@@ -168,6 +169,52 @@
 #menuPopup .menu-content .price { color:#000 !important; }
 #menuPopup .menu-content .searchbar { border-color: rgba(0,0,0,.25) !important; background: rgba(255,255,255,.65) !important; color:#000 !important; }
 #menuPopup .menu-content .small { color: rgba(0,0,0,.7) !important; }
+
+
+/* --- Responsive improvements --- */
+@media (max-width: 900px){
+  .main{ padding: 140px 12px 20px 12px !important; }
+  .row{ gap: 12px !important; }
+  .row .box{ max-width: 100% !important; }
+  #orderForm{ max-height: none !important; overflow: visible !important; }
+}
+@media (max-width: 600px){
+  .main{ padding: 110px 10px 16px 10px !important; }
+  table{ font-size: 12px !important; }
+  th,td{ padding: 6px !important; }
+}
+
+
+/* --- Menu popup sticky footer --- */
+#menuPopup .menu-content{
+  position: relative;
+  padding-bottom: 90px !important; /* room for sticky button */
+}
+#menuPopup .menu-sticky-footer{
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #ffd700;
+  border-top: 1px solid rgba(0,0,0,.25);
+  padding: 10px;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  align-items: center;
+  z-index: 5;
+}
+#menuPopup .menu-sticky-footer button{
+  width: auto !important;
+  min-width: 160px;
+}
+@media (max-width: 700px){
+  #menuPopup .menu-content{
+    width: 96% !important;
+    max-height: 92% !important;
+    border-radius: 10px !important;
+  }
+}
 
 </style>
 </head>
@@ -504,8 +551,11 @@
 </div>
       <label>הערות להזמנה:</label>
       <textarea id="noteText" rows="3" placeholder="ניתן להוסיף בקשות מיוחדות או פריטים שאינם ברשימה"></textarea>
-      <button type="button" onclick="saveMenuSelection()" class="btn-red" style="margin-top:10px;">שמור וסגור</button>
-    </div>
+      
+      <div class="menu-sticky-footer">
+        <button type="button" onclick="saveMenuSelection()" class="btn-red">סיום ובחירת מנות</button>
+      </div>
+</div>
   </div>
   <!-- פופאפ סיכום -->
   <div id="popup">
