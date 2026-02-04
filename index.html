@@ -21,7 +21,10 @@
       color: #fff;
     }
     .box {
-      background: rgba(0, 0, 0, 0.75);
+      /* The overlay background had a high opacity, which hid the underlying design.
+       * Reduce the opacity so the artwork remains visible behind the popup.
+       */
+      background: rgba(0, 0, 0, 0.5);
       color: #fff;
       padding: 15px;
       border-radius: 4px;
