@@ -567,6 +567,47 @@
     </div>
   </div>
   <script>
+
+    // --- Firestore helpers (LIVE) ---
+    function _fs() {
+      if (!window.__db || !window.__fs) return null;
+      return { db: window.__db, ...window.__fs };
+    }
+
+    async function fsSetMeta(orderId, meta) {
+      const f = _fs(); if (!f) return;
+      await f.setDoc(
+        f.doc(f.db, "orders", orderId),
+        { ...meta, updatedAt: f.serverTimestamp() },
+        { merge: true }
+      );
+    }
+
+    async function fsGetMeta(orderId) {
+      const f = _fs(); if (!f) return null;
+      const snap = await f.getDoc(f.doc(f.db, "orders", orderId));
+      return snap.exists() ? snap.data() : null;
+    }
+
+    async function fsSaveOrder(orderId, orderData) {
+      const f = _fs(); if (!f) return;
+      await f.addDoc(
+        f.collection(f.db, "orders", orderId, "items"),
+        { ...orderData, createdAt: f.serverTimestamp() }
+      );
+    }
+
+    function fsListenOrders(orderId) {
+      const f = _fs(); if (!f) return () => {};
+      const ref = f.collection(f.db, "orders", orderId, "items");
+      const q = f.query(ref, f.orderBy("createdAt", "asc"));
+      return f.onSnapshot(q, (snap) => {
+        orders = [];
+        snap.forEach((d) => orders.push({ id: d.id, ...d.data() }));
+        updateSummary();
+      });
+    }
+
     let orders = [];
     let paymentLink = '';
     let orderLink = '';
@@ -578,9 +619,16 @@
       const orderId = params.get('order');
       if (orderId) {
         currentOrderId = orderId;
-        const storedOrders = localStorage.getItem('ordersData_' + currentOrderId);
-        if (storedOrders) {
-          try { orders = JSON.parse(storedOrders); } catch(e) { orders = []; }
+        // LIVE: load meta + listen to orders
+        if (window.__unsubOrders) { try { window.__unsubOrders(); } catch(e){} }
+        window.__unsubOrders = fsListenOrders(currentOrderId);
+        fsGetMeta(currentOrderId).then((meta) => {
+          if (meta && meta.paymentLink) {
+            paymentLink = meta.paymentLink;
+            updateSummary();
+          }
+        });
+catch(e) { orders = []; }
         }
         const storedPayment = localStorage.getItem('paymentLink_' + currentOrderId);
         if (storedPayment) { paymentLink = storedPayment; }
@@ -804,5 +852,32 @@
     }
     document.addEventListener('DOMContentLoaded', initPage);
   </script>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+  import {
+    getFirestore,
+    doc, setDoc, getDoc,
+    collection, addDoc,
+    onSnapshot, serverTimestamp,
+    query, orderBy
+  } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBF5lnU86OrzvlcHKNUf0h-2txKLgC5IJo",
+    authDomain: "mcd-office-orders.firebaseapp.com",
+    projectId: "mcd-office-orders",
+    storageBucket: "mcd-office-orders.firebasestorage.app",
+    messagingSenderId: "10595740776",
+    appId: "1:10595740776:web:e59ad7fdbab2f93079dfdd"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  // expose to non-module script
+  window.__db = db;
+  window.__fs = { doc, setDoc, getDoc, collection, addDoc, onSnapshot, serverTimestamp, query, orderBy };
+</script>
 </body>
 </html>
