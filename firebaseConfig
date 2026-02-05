@@ -1,0 +1,12 @@
+const firebaseConfig = {
+  apiKey: "AIzaSyBF5lnU86OrzvlcHKNUf0h-2txKLgC5IJo",
+  authDomain: "mcd-office-orders.firebaseapp.com",
+  databaseURL: "https://mcd-office-orders-default-rtdb.firebaseio.com",
+  projectId: "mcd-office-orders",
+  storageBucket: "mcd-office-orders.appspot.com",
+  messagingSenderId: "10595740776",
+  appId: "1:10595740776:web:e59ad7fdbab2f93079dfdd",
+  measurementId: "G-XTXX1Q6Y1W"
+};
+
+export default firebaseConfig;
