@@ -27,6 +27,16 @@
       border-radius: 4px;
       box-sizing: border-box;
     }
+
+    /* Container for main content.  Sets max-width on large screens and applies
+       top padding to preserve a 200px design header.  Side padding keeps
+       content away from the edges. */
+    .main {
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 200px 20px 20px 20px;
+      box-sizing: border-box;
+    }
     .row {
       display: flex;
       flex-wrap: wrap;
@@ -173,13 +183,13 @@
 
 /* --- Responsive improvements --- */
 @media (max-width: 900px){
-  .main{ padding: 200px 12px 20px 12px !important; }
+  .main{ max-width: 100%; padding: 200px 12px 20px 12px !important; }
   .row{ gap: 12px !important; }
   .row .box{ max-width: 100% !important; }
   #orderForm{ max-height: none !important; overflow: visible !important; }
 }
 @media (max-width: 600px){
-  .main{ padding: 200px 10px 16px 10px !important; }
+  .main{ max-width: 100%; padding: 200px 10px 16px 10px !important; }
   table{ font-size: 12px !important; }
   th,td{ padding: 6px !important; }
 }
@@ -227,7 +237,7 @@
 </style>
 </head>
 <body>
-  <div class="main" style="max-width: 1300px; margin: 0 auto; padding: 200px 20px 20px 20px;">
+  <div class="main">
     <!-- קישור להזמנה שמוצג לאחר פתיחת הזמנה -->
     <div id="orderLinkContainer" class="box" style="display:none; margin-bottom:20px;">
       <span id="orderLink" style="color:#ffd700;"></span>
@@ -624,20 +634,24 @@
     let currentNote = '';
     function initPage() {
       const params = new URLSearchParams(window.location.search);
-      const orderId = params.get('order');
+      const orderId = params.get("order");
       if (orderId) {
         currentOrderId = orderId;
         // LIVE: load meta + listen to orders
-        if (window.__unsubOrders) { try { window.__unsubOrders(); } catch(e){} }
+        if (window.__unsubOrders) {
+          try {
+            window.__unsubOrders();
+          } catch (e) {}
+        }
         window.__unsubOrders = fsListenOrders(currentOrderId);
         fsGetMeta(currentOrderId).then((meta) => {
           if (meta && meta.paymentLink) {
             paymentLink = meta.paymentLink;
             updateSummary();
           }
+        }).catch((e) => {
+          orders = [];
         });
-catch(e) { orders = []; }
-        }
         const storedPayment = localStorage.getItem('paymentLink_' + currentOrderId);
         if (storedPayment) { paymentLink = storedPayment; }
         document.getElementById('managerForm').style.display = 'none';
