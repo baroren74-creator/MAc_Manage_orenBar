@@ -636,7 +636,12 @@
     let currentNote = '';
     function initPage() {
       const params = new URLSearchParams(window.location.search);
-      const orderId = params.get("order");
+      // Try to get the order id from the URL; if absent, fall back to localStorage
+      let orderId = params.get("order");
+      if (!orderId) {
+        const stored = localStorage.getItem('currentOrderId');
+        if (stored) orderId = stored;
+      }
       if (orderId) {
         currentOrderId = orderId;
         // LIVE: load meta + listen to orders
@@ -689,7 +694,13 @@
       localStorage.setItem('paymentLink_' + currentOrderId, paymentLink);
       localStorage.setItem('ordersData_' + currentOrderId, JSON.stringify([]));
       orders = [];
+      // Persist the current order id so the page can recover on refresh
+      localStorage.setItem('currentOrderId', currentOrderId);
+      // Update the address bar with the order id without reloading
+      window.history.replaceState({}, '', orderLink);
       updateSummary();
+      // Load any existing orders from the sheet (should be empty for a new order)
+      fetchOrdersFromSheet();
     }
     function copyOrderLink() {
       if (!orderLink) return;
