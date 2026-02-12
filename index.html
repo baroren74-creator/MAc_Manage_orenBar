@@ -756,7 +756,8 @@
       // Persist the order to Google Sheets via the Apps Script web app
       fetch(sheetsURL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        // Using text/plain avoids a CORS preflight that Apps Script cannot handle
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(orderObj)
       }).catch(err => console.error('Failed to save order to sheet', err));
       // Fetch latest orders from the sheet to reflect the addition across devices
