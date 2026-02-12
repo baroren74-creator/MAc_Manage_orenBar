@@ -288,7 +288,10 @@
     <div id="finalSummaryContainer" class="box">
       <h3>סיכום סופי</h3>
       <div id="finalSummary"></div>
-      <button type="button" id="closeOrderButton" onclick="confirmDeleteOrder()" class="btn-red" style="margin-top:10px;">סגור הזמנה</button>
+      <!-- כפתור לשליחת ההזמנה (מעתיק את הסיכום ללוח) -->
+      <button type="button" id="sendOrderButton" onclick="copyOrderToClipboard()" class="btn-yellow" style="margin-top:10px;">שלח הזמנה</button>
+      <!-- כפתור למחיקת ההזמנה (עם הודעת אישור) -->
+      <button type="button" id="deleteOrderButton" onclick="confirmDeleteOrder()" class="btn-red" style="margin-top:10px;">מחק הזמנה</button>
     </div>
   </div>
   <!-- פופאפ תפריט -->
@@ -657,7 +660,11 @@
         document.getElementById('managerForm').style.display = 'block';
         document.getElementById('orderForm').style.display = 'none';
         document.getElementById('orderLinkContainer').style.display = 'none';
-        document.getElementById('closeOrderButton').style.display = 'none';
+        // Hide send/delete buttons when no order is active
+        const sendBtnInit = document.getElementById('sendOrderButton');
+        const deleteBtnInit = document.getElementById('deleteOrderButton');
+        if (sendBtnInit) sendBtnInit.style.display = 'none';
+        if (deleteBtnInit) deleteBtnInit.style.display = 'none';
         updateSummary();
         return;
       }
@@ -666,7 +673,11 @@
       document.getElementById('orderForm').style.display = 'block';
       // Determine whether to show manager controls based on creator status
       document.getElementById('orderLinkContainer').style.display = isCreator ? 'block' : 'none';
-      document.getElementById('closeOrderButton').style.display = isCreator ? 'block' : 'none';
+      // Show or hide manager controls based on creator status
+      const sendBtnShow = document.getElementById('sendOrderButton');
+      const deleteBtnShow = document.getElementById('deleteOrderButton');
+      if (sendBtnShow) sendBtnShow.style.display = isCreator ? 'block' : 'none';
+      if (deleteBtnShow) deleteBtnShow.style.display = isCreator ? 'block' : 'none';
       // Re‑attach Firestore listener if available
       if (window.__unsubOrders) {
         try { window.__unsubOrders(); } catch (e) {}
@@ -723,6 +734,11 @@
       updateSummary();
       // Load any existing orders from the sheet (should be empty for a new order)
       fetchOrdersFromSheet();
+      // Show manager controls for sending and deleting the order
+      const sendBtnAfterCreate = document.getElementById('sendOrderButton');
+      const deleteBtnAfterCreate = document.getElementById('deleteOrderButton');
+      if (sendBtnAfterCreate) sendBtnAfterCreate.style.display = 'block';
+      if (deleteBtnAfterCreate) deleteBtnAfterCreate.style.display = 'block';
     }
     function copyOrderLink() {
       if (!orderLink) return;
@@ -976,11 +992,13 @@
       const managerForm = document.getElementById('managerForm');
       const orderForm = document.getElementById('orderForm');
       const orderLinkContainer = document.getElementById('orderLinkContainer');
-      const closeOrderBtn = document.getElementById('closeOrderButton');
+      const sendBtn = document.getElementById('sendOrderButton');
+      const deleteBtn = document.getElementById('deleteOrderButton');
       if (managerForm) managerForm.style.display = 'block';
       if (orderForm) orderForm.style.display = 'none';
       if (orderLinkContainer) orderLinkContainer.style.display = 'none';
-      if (closeOrderBtn) closeOrderBtn.style.display = 'none';
+      if (sendBtn) sendBtn.style.display = 'none';
+      if (deleteBtn) deleteBtn.style.display = 'none';
       // Re‑enable input fields in the manager form
       document.getElementById('managerName').disabled = false;
       document.getElementById('managerPhone').disabled = false;
@@ -994,6 +1012,40 @@
       // Reset the URL to remove any existing order parameter
       const baseUrl = window.location.href.split('?')[0];
       window.history.replaceState({}, '', baseUrl);
+    }
+
+    // Compose a text representation of the current order and copy it to the clipboard.
+    // This function iterates over the global `orders` array, builds a tab‑separated list
+    // of all fields, calculates the total, and includes the payment link if defined.
+    function copyOrderToClipboard() {
+      if (!orders || orders.length === 0) {
+        alert('לא בוצעו הזמנות.');
+        return;
+      }
+      let text = '';
+      let total = 0;
+      orders.forEach((order) => {
+        const rest = order.restaurant || '';
+        const name = order.name || '';
+        const phone = order.phone || '';
+        const items = (order.items && order.items.length) ? order.items.join(', ') : '';
+        const price = order.price ? order.price.toFixed(2) : '';
+        const note = order.note || '';
+        if (order.price) {
+          total += order.price;
+        }
+        // Build a tab‑separated row
+        text += `${rest}\t${name}\t${phone}\t${items}\t${price}\t${note}\n`;
+      });
+      // Append total amount line
+      text += `סה"כ לתשלום: ${total.toFixed(2)} ₪\n`;
+      // Include payment link if available
+      if (paymentLink) {
+        text += `קישור לתשלום: ${paymentLink}\n`;
+      }
+      navigator.clipboard.writeText(text).then(() => {
+        alert('ההזמנה הועתקה ללוח!');
+      });
     }
     function openMenuPopup() {
       document.getElementById('noteText').value = currentNote;
