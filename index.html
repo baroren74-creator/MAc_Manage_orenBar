@@ -287,38 +287,6 @@
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
         @keyframes scrollIcons { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
-        /*
-         * Responsive backgrounds
-         *
-         * To showcase the restaurant theme properly on both desktop and mobile devices, we set a
-         * default background image for wide screens and override it when the viewport is narrow or in
-         * portrait orientation. This allows one background for desktop and another for phones without
-         * requiring any script logic. The images live alongside this file and are referenced
-         * relative to this HTML file. The backgrounds automatically scale to fill the screen.
-         */
-        body {
-            /* Default (desktop) background */
-            background-image: url('mc_background.jpg');
-            background-size: cover;
-            background-repeat: no-repeat;
-            background-position: center;
-        }
-        /* Mobile/portrait override */
-        @media only screen and (max-width: 600px), (orientation: portrait) {
-            body {
-                background-image: url('mobile bg.jpg');
-            }
-        }
-
-        /*
-         * Leave enough space at the top of the page so the background remains visible.
-         * A 200px margin makes sure that neither the header nor the order interface hides the
-         * top part of the background. Adjusting only the top margin avoids breaking the
-         * responsive layout of the existing UI elements.
-         */
-        .mobile-container {
-            margin-top: 200px;
-        }
     </style>
 </head>
 <body>
