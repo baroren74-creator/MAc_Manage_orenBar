@@ -627,38 +627,66 @@
     }
 
     let orders = [];
+    // URL of the Google Apps Script web app that writes/reads orders to Google Sheets
+    const sheetsURL = 'https://script.google.com/macros/s/AKfycbx4irxF1YNvbLfP0en_gmg17YfWXd0ohwflCykR-C8ijOm5pol7VnAu3grXCecmQd2q/exec';
     let paymentLink = '';
     let orderLink = '';
     let currentOrderId = '';
     let selectedItems = [];
     let currentNote = '';
+    let isCreator = false;
     function initPage() {
       const params = new URLSearchParams(window.location.search);
-      const orderId = params.get("order");
-      if (orderId) {
-        currentOrderId = orderId;
-        // LIVE: load meta + listen to orders
-        if (window.__unsubOrders) {
-          try {
-            window.__unsubOrders();
-          } catch (e) {}
-        }
+      const paramOrderId = params.get("order");
+      const storedOrderId = localStorage.getItem('currentOrderId');
+      // Determine the current order. If the URL contains an order, that takes precedence.
+      // Otherwise, if a stored order exists AND this device is the creator of that order, resume it.
+      if (paramOrderId) {
+        currentOrderId = paramOrderId;
+        isCreator = localStorage.getItem('isCreator_' + currentOrderId) === 'true';
+      } else if (storedOrderId && localStorage.getItem('isCreator_' + storedOrderId) === 'true') {
+        currentOrderId = storedOrderId;
+        isCreator = true;
+        // Reflect the order in the URL without reloading the page
+        const url = new URL(window.location.href);
+        url.searchParams.set('order', currentOrderId);
+        window.history.replaceState({}, '', url);
+      } else {
+        // No order active – show the manager form to create a new order
+        document.getElementById('managerForm').style.display = 'block';
+        document.getElementById('orderForm').style.display = 'none';
+        document.getElementById('orderLinkContainer').style.display = 'none';
+        document.getElementById('closeOrderButton').style.display = 'none';
+        updateSummary();
+        return;
+      }
+      // If an order is active, hide the manager form and show the join form
+      document.getElementById('managerForm').style.display = 'none';
+      document.getElementById('orderForm').style.display = 'block';
+      // Determine whether to show manager controls based on creator status
+      document.getElementById('orderLinkContainer').style.display = isCreator ? 'block' : 'none';
+      document.getElementById('closeOrderButton').style.display = isCreator ? 'block' : 'none';
+      // Re‑attach Firestore listener if available
+      if (window.__unsubOrders) {
+        try { window.__unsubOrders(); } catch (e) {}
+      }
+      if (currentOrderId) {
         window.__unsubOrders = fsListenOrders(currentOrderId);
+      }
+      // Load meta (e.g., payment link) from Firestore if it exists
+      if (currentOrderId) {
         fsGetMeta(currentOrderId).then((meta) => {
           if (meta && meta.paymentLink) {
             paymentLink = meta.paymentLink;
             updateSummary();
           }
-        }).catch((e) => {
-          orders = [];
-        });
+        }).catch(() => { orders = []; });
         const storedPayment = localStorage.getItem('paymentLink_' + currentOrderId);
         if (storedPayment) { paymentLink = storedPayment; }
-        document.getElementById('managerForm').style.display = 'none';
-        document.getElementById('closeOrderButton').style.display = 'none';
-        document.getElementById('orderForm').style.display = 'block';
-        document.getElementById('orderLinkContainer').style.display = 'none';
-        updateSummary();
+        // Load existing orders from Google Sheets to synchronize across devices
+        fetchOrdersFromSheet();
+        // Periodically refresh from the sheet to pick up new orders
+        setInterval(fetchOrdersFromSheet, 10000);
       }
     }
     function createOrder() {
@@ -685,7 +713,15 @@
       localStorage.setItem('paymentLink_' + currentOrderId, paymentLink);
       localStorage.setItem('ordersData_' + currentOrderId, JSON.stringify([]));
       orders = [];
+      // Persist the current order id and mark this device as the creator
+      localStorage.setItem('currentOrderId', currentOrderId);
+      localStorage.setItem('isCreator_' + currentOrderId, 'true');
+      isCreator = true;
+      // Update the address bar with the order id without reloading
+      window.history.replaceState({}, '', orderLink);
       updateSummary();
+      // Load any existing orders from the sheet (should be empty for a new order)
+      fetchOrdersFromSheet();
     }
     function copyOrderLink() {
       if (!orderLink) return;
@@ -707,7 +743,9 @@
         priceTotal += parseFloat(item.price);
         return item.name;
       });
-      orders.push({ restaurant: "מקדונלד'ס", name, phone, items: itemNames, price: priceTotal, note: currentNote });
+      // Assemble the order object, including the orderId so it can be filtered in the sheet
+      const orderObj = { orderId: currentOrderId, restaurant: "מקדונלד'ס", name, phone, items: itemNames, price: priceTotal, note: currentNote };
+      orders.push(orderObj);
       document.getElementById('userName').value = '';
       document.getElementById('userPhone').value = '';
       selectedItems = [];
@@ -715,6 +753,15 @@
       document.querySelectorAll('.menu-item').forEach(cb => cb.checked = false);
       document.getElementById('noteText').value = '';
       if (currentOrderId) localStorage.setItem('ordersData_' + currentOrderId, JSON.stringify(orders));
+      // Persist the order to Google Sheets via the Apps Script web app
+      fetch(sheetsURL, {
+        method: 'POST',
+        // Using text/plain avoids a CORS preflight that Apps Script cannot handle
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(orderObj)
+      }).catch(err => console.error('Failed to save order to sheet', err));
+      // Fetch latest orders from the sheet to reflect the addition across devices
+      if (currentOrderId) fetchOrdersFromSheet();
       updateSummary();
     }
     function updateSummary() {
@@ -798,6 +845,35 @@
         feeInfo.textContent = 'דמי משלוח (16 ₪) יחולקו באופן שווה בין כל המזמינים.';
         paymentContainer.appendChild(feeInfo);
       }
+    }
+
+    /**
+     * Fetch all orders from the Google Sheets via the Apps Script web app and update
+     * the local orders array. This function should be called on page load
+     * (when viewing an existing order) to synchronize orders across devices.
+     */
+    function fetchOrdersFromSheet() {
+      if (!currentOrderId) return;
+      const url = sheetsURL + '?order=' + encodeURIComponent(currentOrderId);
+      fetch(url)
+        .then((response) => response.json())
+        .then((data) => {
+          // Data is expected to be an array of order objects
+          if (Array.isArray(data)) {
+            orders = data.map(row => ({
+              restaurant: row.restaurant || 'מקדונלד\'ס',
+              name: row.name || '',
+              phone: row.phone || '',
+              items: row.items || [],
+              price: row.price ? parseFloat(row.price) : 0,
+              note: row.note || ''
+            }));
+            updateSummary();
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to fetch orders from sheet', err);
+        });
     }
     function closeOrder() {
       const popupContent = document.getElementById('popupContent'); popupContent.innerHTML = '';
