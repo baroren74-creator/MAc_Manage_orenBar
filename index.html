@@ -627,6 +627,8 @@
     }
 
     let orders = [];
+    // URL of the Google Apps Script web app that writes/reads orders to Google Sheets
+    const sheetsURL = 'https://script.google.com/macros/s/AKfycbxm3FKE7nEwl7fcrOYysxJFIOEVt55l9uduIyq17f2xJLkK1Slv9753SqR7m3HSAtzT/exec';
     let paymentLink = '';
     let orderLink = '';
     let currentOrderId = '';
@@ -659,6 +661,8 @@
         document.getElementById('orderForm').style.display = 'block';
         document.getElementById('orderLinkContainer').style.display = 'none';
         updateSummary();
+        // Load existing orders from Google Sheets to synchronize across devices
+        fetchOrdersFromSheet();
       }
     }
     function createOrder() {
@@ -707,7 +711,9 @@
         priceTotal += parseFloat(item.price);
         return item.name;
       });
-      orders.push({ restaurant: "מקדונלד'ס", name, phone, items: itemNames, price: priceTotal, note: currentNote });
+      // Assemble the order object
+      const orderObj = { restaurant: "מקדונלד'ס", name, phone, items: itemNames, price: priceTotal, note: currentNote };
+      orders.push(orderObj);
       document.getElementById('userName').value = '';
       document.getElementById('userPhone').value = '';
       selectedItems = [];
@@ -715,6 +721,12 @@
       document.querySelectorAll('.menu-item').forEach(cb => cb.checked = false);
       document.getElementById('noteText').value = '';
       if (currentOrderId) localStorage.setItem('ordersData_' + currentOrderId, JSON.stringify(orders));
+      // Persist the order to Google Sheets via the Apps Script web app
+      fetch(sheetsURL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderObj)
+      }).catch(err => console.error('Failed to save order to sheet', err));
       updateSummary();
     }
     function updateSummary() {
@@ -798,6 +810,33 @@
         feeInfo.textContent = 'דמי משלוח (16 ₪) יחולקו באופן שווה בין כל המזמינים.';
         paymentContainer.appendChild(feeInfo);
       }
+    }
+
+    /**
+     * Fetch all orders from the Google Sheets via the Apps Script web app and update
+     * the local orders array. This function should be called on page load
+     * (when viewing an existing order) to synchronize orders across devices.
+     */
+    function fetchOrdersFromSheet() {
+      fetch(sheetsURL)
+        .then((response) => response.json())
+        .then((data) => {
+          // Data is expected to be an array of order objects
+          if (Array.isArray(data)) {
+            orders = data.map(row => ({
+              restaurant: row.restaurant || 'מקדונלד\'ס',
+              name: row.name || '',
+              phone: row.phone || '',
+              items: row.items || [],
+              price: row.price ? parseFloat(row.price) : 0,
+              note: row.note || ''
+            }));
+            updateSummary();
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to fetch orders from sheet', err);
+        });
     }
     function closeOrder() {
       const popupContent = document.getElementById('popupContent'); popupContent.innerHTML = '';
