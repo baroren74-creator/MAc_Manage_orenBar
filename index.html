@@ -809,7 +809,8 @@
         const thead = document.createElement('thead');
         const headTr = document.createElement('tr');
         // הוסף עמודת משלוח לראש הטבלה
-        ['מסעדה','שם','טלפון','מנות','מחיר (₪)','משלוח (₪)','הערות'].forEach(text => {
+        // הוסף עמודת סכום כולל למשלוח (מחיר + משלוח) לראש הטבלה
+        ['מסעדה','שם','טלפון','מנות','מחיר (₪)','משלוח (₪)','סכום כולל (₪)','הערות'].forEach(text => {
           const th = document.createElement('th');
           th.textContent = text;
           headTr.appendChild(th);
@@ -826,14 +827,19 @@
           const tdItems = document.createElement('td'); tdItems.textContent = (order.items && order.items.length) ? order.items.join(', ') : '';
           const tdPrice = document.createElement('td'); tdPrice.textContent = order.price ? order.price.toFixed(2) : '';
           const tdDelivery = document.createElement('td'); tdDelivery.textContent = share.toFixed(2);
+          const tdTotal = document.createElement('td');
+          // Calculate per‑order total including shipping share
+          const priceNum = order.price || 0;
+          tdTotal.textContent = (priceNum + share).toFixed(2);
           const tdNote = document.createElement('td'); tdNote.textContent = order.note || '';
-          totalSum += order.price || 0;
+          totalSum += priceNum;
           tr.appendChild(tdRest);
           tr.appendChild(tdName);
           tr.appendChild(tdPhone);
           tr.appendChild(tdItems);
           tr.appendChild(tdPrice);
           tr.appendChild(tdDelivery);
+          tr.appendChild(tdTotal);
           tr.appendChild(tdNote);
           ftbody.appendChild(tr);
         });
@@ -1024,7 +1030,7 @@
       }
       let text = '';
       let total = 0;
-      orders.forEach((order) => {
+      orders.forEach((order, idx) => {
         const rest = order.restaurant || '';
         const name = order.name || '';
         const phone = order.phone || '';
@@ -1034,10 +1040,15 @@
         if (order.price) {
           total += order.price;
         }
-        // Build a tab‑separated row
-        text += `${rest}\t${name}\t${phone}\t${items}\t${price}\t${note}\n`;
+        // Build a more readable multi‑line entry for each order
+        text += `${idx + 1}. מסעדה: ${rest}\n`;
+        text += `   שם: ${name}\n`;
+        text += `   טלפון: ${phone}\n`;
+        text += `   מנות: ${items}\n`;
+        text += `   מחיר: ${price ? price + ' ₪' : ''}\n`;
+        text += `   הערות: ${note}\n\n`;
       });
-      // Append total amount line
+      // Append total amount line in Hebrew
       text += `סה"כ לתשלום: ${total.toFixed(2)} ₪\n`;
       // Include payment link if available
       if (paymentLink) {
@@ -1050,15 +1061,24 @@
     function openMenuPopup() {
       document.getElementById('noteText').value = currentNote;
       document.querySelectorAll('.menu-item').forEach(cb => {
-        const exists = selectedItems.find(item => item.name === cb.getAttribute('data-name'));
-        cb.checked = !!exists;
+    // When reopening the menu popup, restore checked state based on the item
+    // names stored in `selectedItems`. Use the value attribute on the checkbox
+    // rather than the non‑existent data-name attribute to match names.
+    const itemName = cb.value || cb.getAttribute('value');
+    const exists = selectedItems.find(item => item.name === itemName);
+    cb.checked = !!exists;
       });
       document.getElementById('menuPopup').style.display = 'flex';
     }
     function saveMenuSelection() {
       selectedItems = [];
       document.querySelectorAll('.menu-item:checked').forEach(cb => {
-        selectedItems.push({ name: cb.getAttribute('data-name'), price: cb.getAttribute('data-price') });
+        // Use the checkbox value attribute as the item name since data-name is not defined
+        const name = cb.value || cb.getAttribute('value');
+        // Parse the price as a float; ensure a number is stored
+        const priceAttr = cb.getAttribute('data-price');
+        const price = priceAttr ? parseFloat(priceAttr) : 0;
+        selectedItems.push({ name: name, price: price });
       });
       currentNote = document.getElementById('noteText').value.trim();
       document.getElementById('menuPopup').style.display = 'none';
