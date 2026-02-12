@@ -1028,29 +1028,23 @@
         alert('לא בוצעו הזמנות.');
         return;
       }
+      // Compute each order's share of the delivery fee (16 ₪) and
+      // assemble a concise, line‑separated summary. We omit the restaurant
+      // and phone details for clarity, as requested. Each entry lists the
+      // name, the ordered items, and the total including the per‑person
+      // shipping share.
+      const deliveryFee = 16;
+      const share = orders.length > 0 ? (deliveryFee / orders.length) : 0;
       let text = '';
-      let total = 0;
-      orders.forEach((order, idx) => {
-        const rest = order.restaurant || '';
+      orders.forEach((order) => {
         const name = order.name || '';
-        const phone = order.phone || '';
         const items = (order.items && order.items.length) ? order.items.join(', ') : '';
-        const price = order.price ? order.price.toFixed(2) : '';
-        const note = order.note || '';
-        if (order.price) {
-          total += order.price;
-        }
-        // Build a more readable multi‑line entry for each order
-        text += `${idx + 1}. מסעדה: ${rest}\n`;
-        text += `   שם: ${name}\n`;
-        text += `   טלפון: ${phone}\n`;
-        text += `   מנות: ${items}\n`;
-        text += `   מחיר: ${price ? price + ' ₪' : ''}\n`;
-        text += `   הערות: ${note}\n\n`;
+        const priceNum = order.price ? Number(order.price) : 0;
+        const totalWithShare = priceNum + share;
+        text += `שם: ${name}\n`;
+        text += `הזמנה: ${items}\n`;
+        text += `סה"כ לתשלום: ${totalWithShare.toFixed(2)} ₪\n\n`;
       });
-      // Append total amount line in Hebrew
-      text += `סה"כ לתשלום: ${total.toFixed(2)} ₪\n`;
-      // Include payment link if available
       if (paymentLink) {
         text += `קישור לתשלום: ${paymentLink}\n`;
       }
