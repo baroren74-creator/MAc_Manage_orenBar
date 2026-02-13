@@ -83,6 +83,42 @@
          font size is at least 16px【364999330155390†L20-L27】. */
       font-size: 16px;
     }
+
+    /*
+     * Each menu item may include a per‑item customization input. It uses
+     * the same styling as standard text inputs but is hidden by default.
+     * When a user selects a menu item, the corresponding input becomes
+     * visible to capture free‑form notes or options for that specific dish.
+     */
+    .item-option {
+      display: none;
+      width: 100%;
+      padding: 6px;
+      margin-top: 4px;
+      margin-bottom: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+      background-color: #fff;
+      color: #000;
+      font-size: 16px;
+    }
+
+    /* Styling for select boxes used to choose between slash‑delimited options
+       within a menu item. Matches the appearance of other input fields. */
+    .item-choice {
+      display: none;
+      width: 100%;
+      padding: 6px;
+      margin-top: 4px;
+      margin-bottom: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+      background-color: #fff;
+      color: #000;
+      font-size: 16px;
+    }
     input:disabled {
       background-color: #eee;
       color: #666;
@@ -625,6 +661,76 @@
   </div>
   <script>
 
+    // Prepare optional per‑item input fields for menu items. Each
+    // `.menu-item` checkbox will have a sibling text input created on the
+    // fly if it does not already exist. The input captures custom notes
+    // or options for that specific dish. When the checkbox is checked,
+    // the input becomes visible; when unchecked, it hides. When
+    // reopening the menu popup, previously stored custom notes are
+    // restored for each selected item.
+    function prepareItemOptions() {
+      document.querySelectorAll('.menu-item').forEach(cb => {
+        const label = cb.parentElement;
+        if (!label) return;
+        // Create the per-item text input if it doesn't exist
+        let optInput = label.querySelector('.item-option');
+        if (!optInput) {
+          optInput = document.createElement('input');
+          optInput.type = 'text';
+          optInput.className = 'item-option';
+          optInput.placeholder = 'הערות למנה (אופציונלי)';
+          // Default hidden via CSS; will be toggled below
+          label.appendChild(optInput);
+          // Bind checkbox change to show/hide the option input
+          cb.addEventListener('change', () => {
+            optInput.style.display = cb.checked ? 'block' : 'none';
+          });
+        }
+        // If the item name includes a slash, provide a select box for the user
+        // to pick the desired option. We split the value on '/' and trim spaces.
+        const rawValue = cb.value || cb.getAttribute('value');
+        if (!label.querySelector('.item-choice') && rawValue && rawValue.includes('/')) {
+          const parts = rawValue.split('/').map(p => p.trim()).filter(p => p);
+          if (parts.length > 1) {
+            const select = document.createElement('select');
+            select.className = 'item-choice';
+            select.style.display = 'none';
+            select.style.marginTop = '4px';
+            select.style.marginBottom = '8px';
+            // Populate the options
+            parts.forEach(pt => {
+              const opt = document.createElement('option');
+              opt.value = pt;
+              opt.textContent = pt;
+              select.appendChild(opt);
+            });
+            label.appendChild(select);
+            // Bind checkbox change to show/hide the select box
+            cb.addEventListener('change', () => {
+              select.style.display = cb.checked ? 'block' : 'none';
+            });
+          }
+        }
+        // Restore the checked state and per-item option/notes for previously selected items
+        const itemName = rawValue;
+        const existing = selectedItems.find(item => item.name === itemName);
+        cb.checked = !!existing;
+        // Show or hide inputs based on checked state
+        optInput.style.display = cb.checked ? 'block' : 'none';
+        // Restore custom note value if present
+        optInput.value = existing && existing.custom ? existing.custom : '';
+        // Restore selected option in the select box if present
+        const selectEl = label.querySelector('.item-choice');
+        if (selectEl) {
+          // Determine default selection
+          if (existing && existing.option) {
+            selectEl.value = existing.option;
+          }
+          selectEl.style.display = cb.checked ? 'block' : 'none';
+        }
+      });
+    }
+
     // --- Firestore helpers (LIVE) ---
     function _fs() {
       if (!window.__db || !window.__fs) return null;
@@ -817,7 +923,19 @@
       let priceTotal = 0;
       const itemNames = selectedItems.map(item => {
         priceTotal += parseFloat(item.price);
-        return item.name;
+        // Determine the final display name. If the user picked an option from a slash‑delimited list,
+        // use that option as the display name; otherwise use the base item name. Append any
+        // additional custom note (from the text input) in parentheses if provided.
+        let displayName = '';
+        if (item.option && item.option.length > 0) {
+          displayName = item.option;
+        } else {
+          displayName = item.name;
+        }
+        if (item.custom && item.custom.length > 0) {
+          displayName += ` (${item.custom})`;
+        }
+        return displayName;
       });
       // Assemble the order object, including the orderId so it can be filtered in the sheet
       const orderObj = { orderId: currentOrderId, restaurant: "מקדונלד'ס", name, phone, items: itemNames, price: priceTotal, note: currentNote };
@@ -1113,14 +1231,8 @@
     }
     function openMenuPopup() {
       document.getElementById('noteText').value = currentNote;
-      document.querySelectorAll('.menu-item').forEach(cb => {
-    // When reopening the menu popup, restore checked state based on the item
-    // names stored in `selectedItems`. Use the value attribute on the checkbox
-    // rather than the non‑existent data-name attribute to match names.
-    const itemName = cb.value || cb.getAttribute('value');
-    const exists = selectedItems.find(item => item.name === itemName);
-    cb.checked = !!exists;
-      });
+      // Prepare and restore per‑item option inputs and checked state
+      prepareItemOptions();
       document.getElementById('menuPopup').style.display = 'flex';
     }
     function saveMenuSelection() {
@@ -1131,7 +1243,13 @@
         // Parse the price as a float; ensure a number is stored
         const priceAttr = cb.getAttribute('data-price');
         const price = priceAttr ? parseFloat(priceAttr) : 0;
-        selectedItems.push({ name: name, price: price });
+        // Find the per-item option input and capture its value
+        const optInput = cb.parentElement.querySelector('.item-option');
+        const custom = optInput ? optInput.value.trim() : '';
+        // If this item has a select box for slash-delimited choices, capture the chosen option
+        const choiceEl = cb.parentElement.querySelector('.item-choice');
+        const optionVal = choiceEl ? choiceEl.value.trim() : '';
+        selectedItems.push({ name: name, price: price, option: optionVal, custom: custom });
       });
       currentNote = document.getElementById('noteText').value.trim();
       document.getElementById('menuPopup').style.display = 'none';
