@@ -279,8 +279,8 @@
         <button type="button" onclick="openMenuPopup()" class="btn-yellow" style="margin-bottom:10px;">לתפריט מקדונלד'ס</button>
         <button type="button" id="addOrderButton" onclick="addOrder()" class="btn-yellow" style="margin-top:10px;">הוסף הזמנה</button>
       </div>
-      <!-- סיכום הזמנות -->
-      <div id="summaryContainer" class="box">
+      <!-- סיכום הזמנות (מוסתר – הטבלה אינה נדרשת עוד) -->
+      <div id="summaryContainer" class="box" style="display:none;">
         <h3>סיכום הזמנות</h3>
         <table id="ordersTable">
           <thead>
@@ -295,18 +295,19 @@
           </thead>
           <tbody></tbody>
         </table>
-        <div id="paymentLinkContainer" style="margin-top:10px;"></div>
       </div>
     </div>
     <!-- סיכום סופי -->
-    <div id="finalSummaryContainer" class="box">
-      <h3>סיכום סופי</h3>
-      <div id="finalSummary"></div>
-      <!-- כפתור לשליחת ההזמנה (מעתיק את הסיכום ללוח) -->
-      <button type="button" id="sendOrderButton" onclick="copyOrderToClipboard()" class="btn-yellow" style="margin-top:10px;">שלח הזמנה</button>
-      <!-- כפתור למחיקת ההזמנה (עם הודעת אישור) -->
-      <button type="button" id="deleteOrderButton" onclick="confirmDeleteOrder()" class="btn-red" style="margin-top:10px;">מחק הזמנה</button>
-    </div>
+      <div id="finalSummaryContainer" class="box">
+        <h3>סיכום סופי</h3>
+        <div id="finalSummary"></div>
+        <!-- קישור לתשלום יוצג כאן, מתחת לסיכום הסופי -->
+        <div id="paymentLinkContainer" style="margin-top:10px;"></div>
+        <!-- כפתור לשליחת ההזמנה (מעתיק את הסיכום ללוח) -->
+        <button type="button" id="sendOrderButton" onclick="copyOrderToClipboard()" class="btn-yellow" style="margin-top:10px;">שלח הזמנה</button>
+        <!-- כפתור למחיקת ההזמנה (עם הודעת אישור) -->
+        <button type="button" id="deleteOrderButton" onclick="confirmDeleteOrder()" class="btn-red" style="margin-top:10px;">מחק הזמנה</button>
+      </div>
   </div>
   <!-- פופאפ תפריט -->
   <div id="menuPopup">
