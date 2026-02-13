@@ -16,7 +16,9 @@
       margin: 0;
       padding: 0;
       min-height: 100vh;
-      background: url('mc_background.jpg') no-repeat center center fixed;
+      /* Anchor the desktop background to the top so that the design stays
+         consistent across devices. */
+      background: url('mc_background.jpg') no-repeat center top fixed;
       background-size: cover;
       color: #fff;
     }
@@ -41,13 +43,28 @@
       display: flex;
       flex-wrap: wrap;
       gap: 20px;
-      align-items: flex-start;
+      /* Stretch the boxes vertically so that they all reach the same height.
+         This prevents one box from ending higher than another when their
+         content differs in length. */
+      align-items: stretch;
       margin-bottom: 20px;
     }
     .row .box {
       flex: 1 1 300px;
       max-width: 33%;
+      /* Make each card a flex container so that its contents can be
+         distributed vertically.  The last child (usually a button) will
+         be pushed to the bottom, helping align the bottoms across cards. */
+      display: flex;
+      flex-direction: column;
     }
+
+/* Push the last child element within each card to the bottom.  This ensures
+   that buttons or other controls align across cards when the content
+   heights differ. */
+.row .box > *:last-child {
+  margin-top: auto;
+}
     @media (max-width: 900px) {
       .row .box {
         max-width: 100%;
@@ -62,6 +79,9 @@
       box-sizing: border-box;
       background-color: #fff;
       color: #000;
+      /* Prevent iOS Safari from zooming in on form fields: ensure the
+         font size is at least 16px【364999330155390†L20-L27】. */
+      font-size: 16px;
     }
     input:disabled {
       background-color: #eee;
@@ -242,7 +262,8 @@
     /* Swap background image on screens up to 768px wide */
     @media (max-width: 768px) {
       body {
-        background: url("mobile bg.jpg") no-repeat center center fixed;
+        /* Anchor mobile background to the top to align with the desktop design. */
+        background: url("mobile bg.jpg") no-repeat center top fixed;
         background-size: cover;
       }
     }
