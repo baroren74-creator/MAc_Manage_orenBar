@@ -96,6 +96,14 @@
     td {
       background-color: #111;
     }
+
+    /* Hide the detailed order summary table and its heading.  The final summary
+       provides all necessary information, so the intermediate table is hidden
+       while keeping the payment link visible. */
+    #summaryContainer h3,
+    #summaryContainer table {
+      display: none;
+    }
     /* פופאפ לתפריט עם iframe ורשימה אינטראקטיבית */
     #menuPopup {
       display: none;
@@ -185,13 +193,18 @@
 @media (max-width: 900px){
   .main{ max-width: 100%; padding: 200px 12px 20px 12px !important; }
   .row{ gap: 12px !important; }
-  .row .box{ max-width: 100% !important; }
+  .row .box{ flex: 1 1 100% !important; max-width: 100% !important; }
   #orderForm{ max-height: none !important; overflow: visible !important; }
 }
 @media (max-width: 600px){
   .main{ max-width: 100%; padding: 200px 10px 16px 10px !important; }
   table{ font-size: 12px !important; }
   th,td{ padding: 6px !important; }
+  /* Ensure boxes take full width on very small screens */
+  .row .box{ flex: 1 1 100% !important; max-width: 100% !important; }
+  /* Improve menu popup layout on small screens */
+  #menuPopup .menu-content{ width: 95% !important; max-height: 90% !important; }
+  #menuPopup iframe{ height: 260px !important; }
 }
 
 
@@ -257,7 +270,8 @@
       </div>
       <!-- טופס הצטרפות להזמנה -->
       <div id="orderForm" class="box" style="display:none; max-height:650px; overflow-y:auto;">
-        <h3>הצטרף להזמנה</h3>
+        <!-- Heading for join form; will be updated dynamically to include manager name when joining -->
+        <h3 id="joinHeading">הצטרף להזמנה</h3>
         <label>שם:</label>
         <input type="text" id="userName" />
         <label>מספר טלפון:</label>
@@ -642,6 +656,17 @@
     function initPage() {
       const params = new URLSearchParams(window.location.search);
       const paramOrderId = params.get("order");
+      // Parse manager name from the URL if provided. This will be used to
+      // personalize the join form heading.
+      const paramManager = params.get('manager');
+      let managerNameFromUrl = '';
+      if (paramManager) {
+        try {
+          managerNameFromUrl = decodeURIComponent(paramManager);
+        } catch (e) {
+          managerNameFromUrl = paramManager;
+        }
+      }
       const storedOrderId = localStorage.getItem('currentOrderId');
       // Determine the current order. If the URL contains an order, that takes precedence.
       // Otherwise, if a stored order exists AND this device is the creator of that order, resume it.
@@ -671,6 +696,15 @@
       // If an order is active, hide the manager form and show the join form
       document.getElementById('managerForm').style.display = 'none';
       document.getElementById('orderForm').style.display = 'block';
+      // Update the heading for the join form to include the manager's name if available
+      const joinHeadingEl = document.getElementById('joinHeading');
+      if (joinHeadingEl) {
+        if (managerNameFromUrl) {
+          joinHeadingEl.textContent = 'הצטרף להזמנה של ' + managerNameFromUrl;
+        } else {
+          joinHeadingEl.textContent = 'הצטרף להזמנה';
+        }
+      }
       // Determine whether to show manager controls based on creator status
       document.getElementById('orderLinkContainer').style.display = isCreator ? 'block' : 'none';
       // Show or hide manager controls based on creator status
@@ -713,7 +747,10 @@
       const randomString = Math.random().toString(36).substring(2,8);
       currentOrderId = randomString;
       const base = window.location.href.split('?')[0];
-      orderLink = base + '?order=' + randomString;
+      // Include the manager's name in the link as an additional parameter so
+      // that guests can see who invited them. Encode it for safety.
+      const managerNameEncoded = encodeURIComponent(managerName);
+      orderLink = base + '?order=' + randomString + '&manager=' + managerNameEncoded;
       document.getElementById('orderLink').textContent = orderLink;
       document.getElementById('orderLinkContainer').style.display = 'block';
       document.getElementById('orderForm').style.display = 'block';
