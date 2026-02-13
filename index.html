@@ -38,9 +38,6 @@
       box-sizing: border-box;
     }
     .row {
-      /* Use the original flex layout without forcing equal heights.  Each box will
-         determine its own height naturally, which avoids overlay issues and keeps
-         interactions responsive in all browsers. */
       display: flex;
       flex-wrap: wrap;
       gap: 20px;
@@ -48,9 +45,6 @@
       margin-bottom: 20px;
     }
     .row .box {
-      /* Each card takes up a third of the row on large screens and a full row on
-         smaller screens. We avoid nested flex containers here to prevent
-         interference with pointer events in some browsers. */
       flex: 1 1 300px;
       max-width: 33%;
     }
@@ -103,9 +97,13 @@
       background-color: #111;
     }
 
-    /* Remove forced hiding of the detailed summary table.  The summary container
-       will instead be hidden entirely via JavaScript when there are no
-       orders.  This prevents a blank rectangle from showing when empty. */
+    /* Hide the detailed order summary table and its heading.  The final summary
+       provides all necessary information, so the intermediate table is hidden
+       while keeping the payment link visible. */
+    #summaryContainer h3,
+    #summaryContainer table {
+      display: none;
+    }
     /* פופאפ לתפריט עם iframe ורשימה אינטראקטיבית */
     #menuPopup {
       display: none;
@@ -670,16 +668,6 @@
           managerNameFromUrl = paramManager;
         }
       }
-      // Update join heading early to always reflect the manager name when the join form
-      // is displayed later. If no manager name is provided, use a generic heading.
-      const joinHeadingElInit = document.getElementById('joinHeading');
-      if (joinHeadingElInit) {
-        if (managerNameFromUrl) {
-          joinHeadingElInit.textContent = 'הצטרף להזמנה של ' + managerNameFromUrl;
-        } else {
-          joinHeadingElInit.textContent = 'הצטרף להזמנה';
-        }
-      }
       const storedOrderId = localStorage.getItem('currentOrderId');
       // Determine the current order. If the URL contains an order, that takes precedence.
       // Otherwise, if a stored order exists AND this device is the creator of that order, resume it.
@@ -706,43 +694,25 @@
         updateSummary();
         return;
       }
-      // If an order is active, decide what to show based on whether this device is the creator
-      if (isCreator) {
-        // Creator: show the manager form (in read‑only state) and hide the join form
-        document.getElementById('managerForm').style.display = 'block';
-        document.getElementById('orderForm').style.display = 'none';
-        // Disable manager fields and button so they cannot be edited
-        document.getElementById('managerName').disabled = true;
-        document.getElementById('managerPhone').disabled = true;
-        document.getElementById('payLink').disabled = true;
-        document.getElementById('createOrderButton').disabled = true;
-        document.getElementById('createOrderButton').style.cursor = 'not-allowed';
-        // Show manager controls and order link
-        document.getElementById('orderLinkContainer').style.display = 'block';
-        const sendBtnShow = document.getElementById('sendOrderButton');
-        const deleteBtnShow = document.getElementById('deleteOrderButton');
-        if (sendBtnShow) sendBtnShow.style.display = 'block';
-        if (deleteBtnShow) deleteBtnShow.style.display = 'block';
-      } else {
-        // Participant: hide the manager form and show the join form
-        document.getElementById('managerForm').style.display = 'none';
-        document.getElementById('orderForm').style.display = 'block';
-        // Update the heading for the join form to include the manager's name if available
-        const joinHeadingEl = document.getElementById('joinHeading');
-        if (joinHeadingEl) {
-          if (managerNameFromUrl) {
-            joinHeadingEl.textContent = 'הצטרף להזמנה של ' + managerNameFromUrl;
-          } else {
-            joinHeadingEl.textContent = 'הצטרף להזמנה';
-          }
+      // If an order is active, hide the manager form and show the join form
+      document.getElementById('managerForm').style.display = 'none';
+      document.getElementById('orderForm').style.display = 'block';
+      // Update the heading for the join form to include the manager's name if available
+      const joinHeadingEl = document.getElementById('joinHeading');
+      if (joinHeadingEl) {
+        if (managerNameFromUrl) {
+          joinHeadingEl.textContent = 'הצטרף להזמנה של ' + managerNameFromUrl;
+        } else {
+          joinHeadingEl.textContent = 'הצטרף להזמנה';
         }
-        // Participants do not see manager controls or order link
-        document.getElementById('orderLinkContainer').style.display = 'none';
-        const sendBtnHide = document.getElementById('sendOrderButton');
-        const deleteBtnHide = document.getElementById('deleteOrderButton');
-        if (sendBtnHide) sendBtnHide.style.display = 'none';
-        if (deleteBtnHide) deleteBtnHide.style.display = 'none';
       }
+      // Determine whether to show manager controls based on creator status
+      document.getElementById('orderLinkContainer').style.display = isCreator ? 'block' : 'none';
+      // Show or hide manager controls based on creator status
+      const sendBtnShow = document.getElementById('sendOrderButton');
+      const deleteBtnShow = document.getElementById('deleteOrderButton');
+      if (sendBtnShow) sendBtnShow.style.display = isCreator ? 'block' : 'none';
+      if (deleteBtnShow) deleteBtnShow.style.display = isCreator ? 'block' : 'none';
       // Re‑attach Firestore listener if available
       if (window.__unsubOrders) {
         try { window.__unsubOrders(); } catch (e) {}
@@ -870,15 +840,7 @@
       });
       const finalDiv = document.getElementById('finalSummary');
       finalDiv.innerHTML = '';
-      // Show or hide the summary and final summary containers based on whether there are orders
-      const summaryContainerEl = document.getElementById('summaryContainer');
-      const finalSummaryContainer = document.getElementById('finalSummaryContainer');
-      if (orders.length === 0) {
-        if (finalSummaryContainer) finalSummaryContainer.style.display = 'none';
-        if (summaryContainerEl) summaryContainerEl.style.display = 'none';
-      } else {
-        if (finalSummaryContainer) finalSummaryContainer.style.display = 'block';
-        if (summaryContainerEl) summaryContainerEl.style.display = 'block';
+      if (orders.length > 0) {
         const deliveryFee = 16;
         const share = deliveryFee / orders.length;
         const table = document.createElement('table');
