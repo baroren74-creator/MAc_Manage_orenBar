@@ -38,23 +38,21 @@
       box-sizing: border-box;
     }
     .row {
+      /* Use the original flex layout without forcing equal heights.  Each box will
+         determine its own height naturally, which avoids overlay issues and keeps
+         interactions responsive in all browsers. */
       display: flex;
       flex-wrap: wrap;
       gap: 20px;
-      /* Stretch all child boxes to equal height so their bottoms align */
-      align-items: stretch;
+      align-items: flex-start;
       margin-bottom: 20px;
     }
     .row .box {
+      /* Each card takes up a third of the row on large screens and a full row on
+         smaller screens. We avoid nested flex containers here to prevent
+         interference with pointer events in some browsers. */
       flex: 1 1 300px;
       max-width: 33%;
-      /* Use flexbox inside each card so content can push the last element to the bottom */
-      display: flex;
-      flex-direction: column;
-    }
-    /* Anchor the last child of each box to the bottom to improve alignment */
-    .row .box > *:last-child {
-      margin-top: auto;
     }
     @media (max-width: 900px) {
       .row .box {
@@ -105,13 +103,9 @@
       background-color: #111;
     }
 
-    /* Hide the detailed order summary table and its heading.  The final summary
-       provides all necessary information, so the intermediate table is hidden
-       while keeping the payment link visible. */
-    #summaryContainer h3,
-    #summaryContainer table {
-      display: none;
-    }
+    /* Remove forced hiding of the detailed summary table.  The summary container
+       will instead be hidden entirely via JavaScript when there are no
+       orders.  This prevents a blank rectangle from showing when empty. */
     /* פופאפ לתפריט עם iframe ורשימה אינטראקטיבית */
     #menuPopup {
       display: none;
@@ -876,12 +870,15 @@
       });
       const finalDiv = document.getElementById('finalSummary');
       finalDiv.innerHTML = '';
-      // Show or hide the entire final summary container based on whether there are orders
+      // Show or hide the summary and final summary containers based on whether there are orders
+      const summaryContainerEl = document.getElementById('summaryContainer');
       const finalSummaryContainer = document.getElementById('finalSummaryContainer');
       if (orders.length === 0) {
         if (finalSummaryContainer) finalSummaryContainer.style.display = 'none';
+        if (summaryContainerEl) summaryContainerEl.style.display = 'none';
       } else {
         if (finalSummaryContainer) finalSummaryContainer.style.display = 'block';
+        if (summaryContainerEl) summaryContainerEl.style.display = 'block';
         const deliveryFee = 16;
         const share = deliveryFee / orders.length;
         const table = document.createElement('table');
