@@ -1,20 +1,1115 @@
-
 <!DOCTYPE html>
-<html lang="he">
+<html lang="he" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ספירת סיגריות</title>
-  <link rel="stylesheet" href="styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wait &amp; Win - Custom Design</title>
+    <style>
+        :root {
+            --mcd-red: #DA291C;
+            --mcd-yellow: #FFC72C;
+            --dark: #27251F;
+            --light-gray: #f4f4f4;
+            /* default cell size for a 3×3 board; this will be updated dynamically */
+            --cell-size: 90px;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            /* fallback colour when images are loading */
+            background-color: var(--light-gray);
+            /* mobile background by default */
+            background-image: url('bg_Mobile.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        /* Desktop-specific background */
+        @media (min-width: 768px) {
+            body {
+                background-image: url('bg_desktop.jpg');
+            }
+        }
+        .mobile-container {
+            width: 100%;
+            max-width: 400px;
+            height: 100vh;
+            background: transparent;
+            /* subtle shadow so the card stands out against busy backgrounds */
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+        /* Header banner: displays a pre-made header graphic.  The graphic differs on mobile and desktop. */
+        .header-banner {
+            width: 100%;
+            height: 160px;
+            background-image: url('heder_Mobile.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        @media (min-width: 768px) {
+            .header-banner {
+                height: 140px;
+                background-image: url('heder_desktop.png');
+            }
+        }
+        /* Dark status bar for order status and waiting count */
+        .order-status {
+            background-color: var(--dark);
+            color: white;
+            padding: 18px 8px;
+            border-bottom: 4px solid var(--mcd-yellow);
+            text-align: center;
+        }
+        .order-status .order-number {
+            font-size: 22px;
+            font-weight: bold;
+        }
+        .order-status .live-counter {
+            font-size: 14px;
+            color: var(--mcd-yellow);
+            margin-top: 4px;
+            animation: pulse 2s infinite;
+        }
+        /* Main waiting screen */
+        #mainScreen {
+            flex-grow: 1;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        #mainScreen h2 {
+            margin-top: 0;
+            color: var(--dark);
+        }
+        #mainScreen p {
+            color: #555;
+            font-size: 16px;
+            margin: 10px 0 20px;
+        }
+        /* Panel used on the main screen to match the board styling */
+        .main-panel {
+            background-color: rgba(255, 249, 232, 0.95);
+            background-image:
+              radial-gradient(circle, rgba(255,199,44,0.70) 2px, transparent 2.5px),
+              radial-gradient(circle, rgba(255,199,44,0.40) 2px, transparent 2.8px),
+              radial-gradient(circle, rgba(255,199,44,0.60) 1.5px, transparent 2.3px);
+            background-size: 25px 25px, 35px 35px, 45px 45px;
+            background-position: 0 0, 10px 10px, 20px 20px;
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+        .btn-play {
+            background-color: var(--mcd-red);
+            color: #fff;
+            border: none;
+            padding: 14px 32px;
+            font-size: 18px;
+            border-radius: 40px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(218, 41, 28, 0.4);
+            transition: transform 0.2s;
+        }
+        .btn-play:hover { transform: scale(1.05); }
+        .btn-play:active { transform: scale(0.95); }
+        /* Lobby overlay */
+        .overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.85);
+            color: #fff;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            text-align: center;
+            padding: 20px;
+        }
+        .overlay h2, .overlay h3 { margin: 10px 0; }
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--mcd-yellow);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        /* Avatar carousel used in the lobby instead of emoji icons.  Each image is a circle with a yellow border and scrolls horizontally. */
+        .avatar-carousel {
+            overflow: hidden;
+            width: 240px;
+            height: 48px;
+            margin-top: 20px;
+            position: relative;
+        }
+        .avatar-carousel .track {
+            display: flex;
+            align-items: center;
+            animation: scrollAvatars 8s linear infinite;
+        }
+        .avatar-carousel img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid var(--mcd-yellow);
+            object-fit: cover;
+            margin: 0 4px;
+        }
+        @keyframes scrollAvatars {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        /* Game screen */
+        #gameScreen {
+            flex-grow: 1;
+            padding: 10px;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            position: relative;
+        }
+        /* Hide separate player info and timer: information will be shown in the yellow bubble */
+        #gameScreen .player-info, .timer {
+            display: none;
+        }
+        /* Board wrapper provides a semi-transparent confetti background to differentiate
+           the game from the page background. The confetti pattern is kept subtle so the
+           underlying header and background design remain visible. */
+        .board-wrapper {
+            background-color: rgba(255, 249, 232, 0.95);
+            background-image:
+              radial-gradient(circle, rgba(255,199,44,0.70) 2px, transparent 2.5px),
+              radial-gradient(circle, rgba(255,199,44,0.40) 2px, transparent 2.8px),
+              radial-gradient(circle, rgba(255,199,44,0.60) 1.5px, transparent 2.3px);
+            background-size: 25px 25px, 35px 35px, 45px 45px;
+            background-position: 0 0, 10px 10px, 20px 20px;
+            padding: 28px 20px 20px;
+            border-radius: 16px;
+            display: inline-block;
+            margin-top: 16px;
+            margin-bottom: 10px;
+            position: relative;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .board {
+            display: grid;
+            gap: 6px;
+        }
+        .cell {
+            width: var(--cell-size);
+            height: var(--cell-size);
+            background: #fff;
+            border: 1.5px solid var(--mcd-yellow);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            font-weight: bold;
+            cursor: pointer;
+            color: var(--mcd-red);
+            position: relative;
+            user-select: none;
+        }
+        .cell.o { color: var(--dark); }
+        /* Generic information bubble */
+        .info-bubble {
+            position: absolute;
+            top: -24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--mcd-yellow);
+            color: var(--dark);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 16px;
+            font-weight: bold;
+            white-space: nowrap;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        }
+        .info-bubble::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            right: 50%;
+            transform: translateX(50%);
+            border: 8px solid transparent;
+            border-top-color: var(--mcd-yellow);
+        }
+
+        /* Level bar container: displays current level and a horizontal progress bar */
+        .level-container {
+            display: flex;
+            flex-direction: column;
+            /* Slightly more opaque background to improve contrast over busy design */
+            background: rgba(255, 255, 255, 0.9);
+            padding: 6px 10px;
+            margin: 10px 16px 0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .level-info {
+            display: flex;
+            /* Align the level and score info on one line with a small gap rather than pushing
+               them to opposite ends.  This makes the level and points appear as a single
+               combined label, separated by a divider. */
+            justify-content: flex-start;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            margin-bottom: 4px;
+        }
+        .level-info span {
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        .level-progress {
+            width: 100%;
+            height: 6px;
+            background: #eee;
+            border-radius: 3px;
+            overflow: hidden;
+            position: relative;
+        }
+        .level-progress div {
+            height: 100%;
+            width: 0%;
+            background: var(--mcd-yellow);
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+
+        /* Container for info bubble and opponent avatar.  Places the bubble and avatar side by side */
+        .info-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 4px;
+        }
+        .opponent-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-left: 8px;
+        }
+        .opponent-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 2px solid var(--mcd-yellow);
+            object-fit: cover;
+            background: #fff;
+        }
+        .opponent-level {
+            font-size: 12px;
+            color: var(--dark);
+            margin-top: 2px;
+            font-weight: bold;
+        }
+        /* Chat */
+        .chat {
+            width: 100%;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            height: 120px;
+        }
+        .chat-messages {
+            flex-grow: 1;
+            padding: 4px 6px;
+            overflow-y: auto;
+            text-align: right;
+            font-size: 18px;
+        }
+        .chat-messages .self { color: var(--mcd-red); }
+        .chat-messages .opponent { color: var(--dark); }
+        .emoji-bar {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px;
+            border-top: 1px solid #ddd;
+        }
+        .emoji-bar span {
+            cursor: pointer;
+            font-size: 22px;
+        }
+        #statusMsg { display: none; }
+        /* Toasts for feedback */
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0,0,0,0.85);
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 6px;
+            z-index: 1000;
+            font-size: 14px;
+            opacity: 0;
+            animation: fadeInOut 3s forwards;
+            pointer-events: none;
+        }
+        @keyframes fadeInOut {
+            0% { opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+        /* Scrolling avatars track reused animation name from the lobby */
+    </style>
 </head>
 <body>
-  <div class="container">
-    <h1>ספירת סיגריות</h1>
-    <p>כמות הסיגריות היום: <span id="cigarettes-count">0</span></p>
-    <button id="add-cigarette">הוסף סיגריה</button>
-    <p id="notification"></p>
-    <p id="countdown">זמן עד התראה הבאה: 3:00:00</p>
-  </div>
-  <script src="script.js"></script>
+    <div class="mobile-container">
+        <!-- Header banner from the design.  Displays the wait&win logo and tagline. -->
+        <div class="header-banner"></div>
+        <!-- Order status bar: shows order number and live wait counter -->
+        <div class="order-status">
+            <div class="order-number">הזמנה #492 בהכנה...</div>
+            <div class="live-counter">🔥 <span id="countWait">1,420</span> רעבים מחכים איתך למקדונלדס עכשיו!</div>
+        </div>
+        <!-- Main screen -->
+        <div id="mainScreen">
+            <div class="main-panel">
+                <h2>משעמם לחכות לבד?</h2>
+                <p>בוא לשחק מול לקוח אחר ולקבל מתנה!</p>
+                <button class="btn-play" onclick="startMatchmaking()">שחק עכשיו</button>
+            </div>
+        </div>
+        <!-- Lobby overlay -->
+        <div class="overlay" id="lobbyOverlay">
+            <div class="loader"></div>
+            <h3 id="lobbyText">מחפש יריב...</h3>
+            <!-- Avatar carousel shows real waiting players instead of generic icons -->
+            <div class="avatar-carousel" id="avatarCarousel">
+                <div class="track" id="avatarTrack"></div>
+            </div>
+        </div>
+        <!-- Game screen -->
+        <div id="gameScreen">
+            <!-- Player level and progress bar: shows the current level, total points and remaining points to next level -->
+            <div class="level-container" id="levelContainer" style="display:none;">
+                <div class="level-info">
+                    <span id="playerLevelLabel">רמה: Mc Rookie</span>
+                    <span id="playerScoreInfo">0 pts</span>
+                </div>
+                <div class="level-progress">
+                    <div id="levelProgressFill"></div>
+                </div>
+            </div>
+            <!-- Info bubble sits above the board wrapper -->
+            <div class="board-wrapper">
+                <div class="info-container">
+                    <div class="info-bubble" id="infoBubble" data-base=""></div>
+                    <div class="opponent-info">
+                        <img id="opponentAvatar" class="opponent-avatar" src="" alt="יריב" />
+                        <span id="opponentLevelLabel" class="opponent-level">Mc Rookie</span>
+                    </div>
+                </div>
+                <div class="board" id="board"></div>
+            </div>
+            <div class="chat" id="chatPanel">
+                <div id="chatMessages" class="chat-messages"></div>
+                <div class="emoji-bar">
+                    <span onclick="sendEmoji('😊')">😊</span>
+                    <span onclick="sendEmoji('😂')">😂</span>
+                    <span onclick="sendEmoji('🍔')">🍔</span>
+                    <span onclick="sendEmoji('🍟')">🍟</span>
+                    <span onclick="sendEmoji('😮')">😮</span>
+                </div>
+            </div>
+            <p id="statusMsg">התור שלך!</p>
+        </div>
+        <!-- Game end overlay -->
+        <div class="overlay" id="gameEndOverlay">
+            <h2 id="endMessage">ניצחת!</h2>
+            <p id="progressInfo">ניצחון 1 מתוך 3!</p>
+            <button class="btn-play" onclick="continueGame()">המשך ליריב הבא</button>
+        </div>
+        <!-- Order ready overlay: appears when the kitchen calls your number.
+             It dims the game instead of ending it. When the player acknowledges
+             the message, the overlay disappears and play resumes. -->
+        <div class="overlay" id="orderReadyOverlay" style="background: rgba(0,0,0,0.6);">
+            <h2>האוכל מוכן!</h2>
+            <p>ההזמנה שלך מוכנה. ניתן לאסוף – המשחק ממשיך כשתסגור את ההודעה.</p>
+            <button class="btn-play" onclick="closeOrderReady()">הבנתי</button>
+        </div>
+    </div>
+    <script>
+        // Opponent names (unchanged)
+        // List of generic opponent labels; we no longer show actual names or cities to keep
+        // the experience neutral and avoid showing fake personal information.
+        const fakeOpponents = ["היריב"];
+        // Level definitions with score thresholds (demo lengths)
+        const levels = [
+            // Custom Mc-themed level names in English with a short prefix
+            { name: 'Mc Rookie', threshold: 0 },
+            { name: 'Mc Warm', threshold: 40 },
+            { name: 'Mc Hot', threshold: 100 },
+            { name: 'Mc Pro', threshold: 180 },
+            { name: 'Mc Legend', threshold: 260 }
+        ];
+        let playerScore = 0;
+        let currentLevelIndex = 0;
+        let boardSize = 3;
+        let gameState = [];
+        let currentPlayer = 'X';
+        let gameActive = false;
+        let winCount = 0;
+        let opponentName = '';
+        let timerInterval;
+        let timeRemaining = 10;
+        let orderReadyTimeout;
+        let isFastRound = false;
+        let finalRoundTriggered = false;
+
+    // Current opponent avatar image source (chosen when matchmaking finishes)
+    let currentOpponentAvatar = '';
+
+    // Timer for reverting the info bubble back to its base message.  When a
+    // temporary status message is shown (e.g. level up or final round), this
+    // timeout is used to clear the message after a few seconds.
+    let infoMessageTimeout;
+
+    /**
+     * Display a temporary message in the info bubble.  The message will
+     * replace the bubble's base content (player's turn and timer) for the
+     * specified duration, then automatically revert to the base content.
+     *
+     * @param {string} message The message to display in the bubble
+     * @param {number} duration How long the message should remain (ms)
+     */
+    function showInfoMessage(message, duration = 3000) {
+        const bubble = document.getElementById('infoBubble');
+        // Cancel any previous timeout so messages don't overlap
+        if (infoMessageTimeout) {
+            clearTimeout(infoMessageTimeout);
+        }
+        // Show the custom message
+        bubble.textContent = message;
+        // After the duration, revert to the base message and current timer
+        infoMessageTimeout = setTimeout(() => {
+            infoMessageTimeout = null;
+            updateInfoBubble();
+        }, duration);
+    }
+
+    /**
+     * Update the player level UI.  Displays the current level name and adjusts
+     * the width of the progress bar to indicate how close the player is to
+     * reaching the next level.  If the player is at the highest level,
+     * the bar is filled completely.
+     */
+    function updateLevelUI() {
+        const levelLabelEl = document.getElementById('playerLevelLabel');
+        const progressFillEl = document.getElementById('levelProgressFill');
+        const scoreInfoEl = document.getElementById('playerScoreInfo');
+        if (!levelLabelEl || !progressFillEl || !scoreInfoEl) return;
+        const level = levels[currentLevelIndex];
+        // Display the level name in Hebrew prefix 'רמה:' for the player's level indicator
+        levelLabelEl.textContent = 'רמה: ' + level.name;
+        let nextThreshold = null;
+        if (currentLevelIndex + 1 < levels.length) {
+            nextThreshold = levels[currentLevelIndex + 1].threshold;
+        }
+        let percent = 100;
+        let pointsToNext = null;
+        if (nextThreshold !== null) {
+            const spanScore = playerScore - level.threshold;
+            const spanTotal = nextThreshold - level.threshold;
+            percent = Math.max(0, Math.min(1, spanScore / spanTotal)) * 100;
+            pointsToNext = nextThreshold - playerScore;
+        }
+        progressFillEl.style.width = percent + '%';
+        // Update score info text.  Show the current score and, if relevant, how many points remain
+        // to reach the next level.  We omit the 'סה"כ' prefix for brevity and separate the
+        // components with a vertical bar.
+        if (pointsToNext !== null) {
+            scoreInfoEl.textContent = playerScore + ' נק׳ | עוד ' + pointsToNext + ' לדרגה הבאה';
+        } else {
+            // On the highest level: show score and indicate max level reached
+            scoreInfoEl.textContent = playerScore + ' נק׳ (מקסימום)';
+        }
+    }
+
+        /**
+         * List of avatar image filenames to display in the lobby carousel.
+         * Place your player images (faces of people waiting) in a folder named `players`
+         * alongside this HTML and name them sequentially (e.g. 01.jpg, 02.jpg, etc.).
+         */
+        const avatarImages = [
+            // Load avatars from the `players` directory.  File names use the
+            // pattern `player_##.png` to match the images provided by the user.
+            // If you have fewer or more images, adjust this list accordingly.
+            'players/player_01.png',
+            'players/player_02.png',
+            'players/player_03.png',
+            'players/player_04.png',
+            'players/player_05.png',
+            'players/player_06.png',
+            'players/player_07.png',
+            'players/player_08.png',
+            'players/player_09.png',
+            'players/player_10.png',
+            'players/player_11.png',
+            'players/player_12.png',
+            'players/player_13.png'
+        ];
+
+        function startMatchmaking() {
+            // Hide main screen, show lobby overlay with loading text
+            document.getElementById('mainScreen').style.display = 'none';
+            document.getElementById('lobbyOverlay').style.display = 'flex';
+            document.getElementById('lobbyText').innerText = "מחפש יריב...";
+            setTimeout(() => {
+                document.getElementById('lobbyText').innerText = "נמצא יריב! מתחבר...";
+            }, 2000);
+            setTimeout(() => {
+                // Always use the generic opponent name. Avoid random names.
+                opponentName = fakeOpponents[0];
+                // Choose a random avatar for this opponent from the available images
+                if (avatarImages.length > 0) {
+                    const randomIndex = Math.floor(Math.random() * avatarImages.length);
+                    currentOpponentAvatar = avatarImages[randomIndex];
+                }
+                document.getElementById('lobbyOverlay').style.display = 'none';
+                document.getElementById('gameScreen').style.display = 'flex';
+                startGame();
+                // Simulate order ready after random time (20–40s)
+                const readyTime = 20000 + Math.random()*20000;
+                orderReadyTimeout = setTimeout(showOrderReady, readyTime);
+            }, 3500);
+        }
+
+        /**
+         * Initialize a new game session. Sets up the board according to the current level,
+         * resets game state, determines if a fast round should trigger and starts the timer.
+         */
+        function startGame() {
+            // Determine board size by level: Legend Mode (last level) uses 4×4
+            boardSize = (currentLevelIndex >= levels.length - 1) ? 4 : 3;
+            // Setup the board grid and cell sizes
+            setupBoard(boardSize);
+            // Reset game state for the current board
+            gameState = Array(boardSize * boardSize).fill("");
+            currentPlayer = 'X';
+            gameActive = true;
+            // Determine if this should be a fast round (final round) based on score
+            isFastRound = false;
+            finalRoundTriggered = false;
+            let nextThreshold = (currentLevelIndex + 1 < levels.length) ? levels[currentLevelIndex + 1].threshold : null;
+            if (nextThreshold !== null && playerScore + 20 >= nextThreshold) {
+                // This game could take the player over the threshold, so it becomes a fast round
+                isFastRound = true;
+                finalRoundTriggered = true;
+                timeRemaining = 6;
+                // Announce the decisive round in Hebrew.  This message aligns with the tone
+                // used in the timer bubble (short and clear) rather than mixing languages.
+                showInfoMessage('שלב מכריע: נצח כדי לעלות רמה');
+            } else {
+                // Normal round timer
+                timeRemaining = 10;
+            }
+            // Set info bubble base message to indicate player's turn
+            const bubble = document.getElementById('infoBubble');
+            bubble.dataset.base = "התור שלך!";
+            updateInfoBubble();
+            // Update opponent avatar and level for this game
+            const avatarEl = document.getElementById('opponentAvatar');
+            const opponentLevelEl = document.getElementById('opponentLevelLabel');
+            if (avatarEl && currentOpponentAvatar) {
+                avatarEl.src = currentOpponentAvatar;
+            }
+            if (opponentLevelEl) {
+                // Display the opponent's level with a Hebrew prefix so players know the AI difficulty
+                opponentLevelEl.textContent = 'רמה: ' + levels[currentLevelIndex].name;
+            }
+            // Show and update level progress bar
+            const lvlContainer = document.getElementById('levelContainer');
+            if (lvlContainer) {
+                lvlContainer.style.display = 'flex';
+                updateLevelUI();
+            }
+            // Start countdown timer
+            startTimer();
+        }
+
+        /**
+         * Dynamically build the board grid based on the desired size. Adjust the cell size
+         * so that a 3×3 and 4×4 board occupy similar width on screen. Update CSS variables accordingly.
+         * @param {number} size Board dimension (3 or 4)
+         */
+        function setupBoard(size) {
+            const boardEl = document.getElementById('board');
+            boardEl.innerHTML = '';
+            // Determine cell size to keep the board roughly the same width as the original 3×3 (270px for cells + gaps)
+            const baseSize = 270;
+            const cellSize = Math.floor(baseSize / size);
+            // Update CSS variable for cell dimensions
+            document.documentElement.style.setProperty('--cell-size', cellSize + 'px');
+            // Compute board width including gaps (6px gap between cells)
+            const boardWidth = cellSize * size + 6 * (size - 1);
+            boardEl.style.width = boardWidth + 'px';
+            boardEl.style.height = boardWidth + 'px';
+            // Setup grid columns
+            boardEl.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+            // Create cells
+            for (let i = 0; i < size * size; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.onclick = () => makeMove(i);
+                boardEl.appendChild(cell);
+            }
+        }
+
+        /**
+         * Update the information bubble with the current base message and remaining time.
+         */
+        function updateInfoBubble() {
+            const bubble = document.getElementById('infoBubble');
+            if (!bubble) return;
+            const base = bubble.dataset.base || '';
+            // Show remaining time only when the game is active
+            if (gameActive) {
+                bubble.innerText = base + ' • ' + timeRemaining;
+            } else {
+                bubble.innerText = base;
+            }
+        }
+
+        /**
+         * Starts a countdown timer. When it reaches zero on the player's turn, the player loses.
+         */
+        function startTimer() {
+            clearInterval(timerInterval);
+            updateInfoBubble();
+            timerInterval = setInterval(() => {
+                timeRemaining--;
+                updateInfoBubble();
+                if (timeRemaining <= 0) {
+                    clearInterval(timerInterval);
+                    timeOut();
+                }
+            }, 1000);
+        }
+
+        /**
+         * Called when the timer reaches zero while the player should have played.
+         */
+        function timeOut() {
+            if (gameActive && currentPlayer === 'X') {
+                endGame(false);
+            }
+        }
+
+        /**
+         * Handle a player move at the given index. Validate the move, update the cell and check for a win.
+         * @param {number} index Index of the cell clicked
+         */
+        function makeMove(index) {
+            if (!gameActive || currentPlayer !== 'X' || gameState[index] !== '') return;
+            gameState[index] = 'X';
+            renderCell(index, 'X');
+            if (checkWin('X')) {
+                endGame(true);
+                return;
+            }
+            if (checkTie()) {
+                endGame(null);
+                return;
+            }
+            // Switch to computer's turn
+            currentPlayer = 'O';
+            const bubble = document.getElementById('infoBubble');
+            bubble.dataset.base = "היריב חושב...";
+            timeRemaining = isFastRound ? 6 : 10;
+            updateInfoBubble();
+            // Let AI make a move after a short delay
+            setTimeout(() => {
+                makeComputerMove();
+            }, 500);
+        }
+
+        /**
+         * Render X or O symbol in a cell
+         */
+        function renderCell(index, symbol) {
+            const boardEl = document.getElementById('board');
+            const cell = boardEl.children[index];
+            const span = document.createElement('span');
+            span.className = symbol === 'X' ? 'cell x' : 'cell o';
+            span.innerText = (symbol === 'X') ? '🍟' : '🍔';
+            // Clear previous symbol if necessary
+            cell.innerHTML = '';
+            cell.appendChild(span);
+        }
+
+        /**
+         * Basic AI with different difficulty levels based on currentLevelIndex.  The AI is simple on
+         * early levels and progressively more tactical on later levels.  For a 3×3 board,
+         * use minimax on the hardest level (Pro Mode and above).  On 4×4 boards,
+         * heuristics are used as minimax is too slow for demo purposes.
+         */
+        function makeComputerMove() {
+            if (!gameActive) return;
+            let move;
+            // Simplify AI at early levels: the first three ranks (Mc Rookie, Mc Warm, Mc Hot)
+            // all play completely at random to make them easier to beat.
+            // Only from Mc Pro onwards do we introduce tactical play.
+            if (currentLevelIndex < 3) {
+                // Ranks 0–2: choose a completely random move
+                move = getRandomMove();
+            } else if (currentLevelIndex === 3) {
+                // Mc Pro: check if AI can win or block, otherwise random
+                move = getBlockingOrWinningMove() ?? getRandomMove();
+            } else {
+                // Mc Legend: use a more tactical approach (minimax/strategic)
+                if (boardSize === 3) {
+                    move = getBestMove();
+                } else {
+                    move = getStrategicMove();
+                }
+            }
+            gameState[move] = 'O';
+            renderCell(move, 'O');
+            if (checkWin('O')) {
+                endGame(false);
+                return;
+            }
+            if (checkTie()) {
+                endGame(null);
+                return;
+            }
+            currentPlayer = 'X';
+            const bubble = document.getElementById('infoBubble');
+            bubble.dataset.base = "התור שלך!";
+            timeRemaining = isFastRound ? 6 : 10;
+            updateInfoBubble();
+            startTimer();
+        }
+
+        /**
+         * Random move for AI
+         */
+        function getRandomMove() {
+            const empty = gameState.map((val, idx) => val === '' ? idx : null).filter(idx => idx !== null);
+            return empty[Math.floor(Math.random() * empty.length)];
+        }
+
+        /**
+         * Return a winning or blocking move if exists, otherwise null
+         */
+        function getBlockingOrWinningMove() {
+            // Try to win
+            for (let i = 0; i < gameState.length; i++) {
+                if (gameState[i] === '') {
+                    gameState[i] = 'O';
+                    if (checkWin('O')) {
+                        gameState[i] = '';
+                        return i;
+                    }
+                    gameState[i] = '';
+                }
+            }
+            // Try to block
+            for (let i = 0; i < gameState.length; i++) {
+                if (gameState[i] === '') {
+                    gameState[i] = 'X';
+                    if (checkWin('X')) {
+                        gameState[i] = '';
+                        return i;
+                    }
+                    gameState[i] = '';
+                }
+            }
+            return null;
+        }
+
+        /**
+         * Prefer center and corners on 3×3 boards. On 4×4 boards, pick a random cell from the edges and corners.
+         */
+        function getStrategicMove() {
+            const emptyCells = gameState.map((val, idx) => val === '' ? idx : null).filter(idx => idx !== null);
+            if (boardSize === 3) {
+                const center = 4;
+                const corners = [0,2,6,8];
+                if (gameState[center] === '') return center;
+                for (const c of corners) {
+                    if (gameState[c] === '') return c;
+                }
+            } else {
+                // For 4×4, prefer corners and edge cells
+                const preferred = [];
+                const size = boardSize;
+                for (let i = 0; i < size; i++) {
+                    for (let j = 0; j < size; j++) {
+                        if (i === 0 || i === size-1 || j === 0 || j === size-1) {
+                            const idx = i * size + j;
+                            if (gameState[idx] === '') preferred.push(idx);
+                        }
+                    }
+                }
+                if (preferred.length) return preferred[Math.floor(Math.random() * preferred.length)];
+            }
+            // Fallback random
+            return emptyCells[Math.floor(Math.random() * emptyCells.length)];
+        }
+
+        /**
+         * Minimax for 3×3 boards at highest difficulty (Pro Mode and above)
+         */
+        function getBestMove() {
+            let bestScore = -Infinity;
+            let move;
+            for (let i = 0; i < gameState.length; i++) {
+                if (gameState[i] === '') {
+                    gameState[i] = 'O';
+                    let score = minimax(gameState, 0, false);
+                    gameState[i] = '';
+                    if (score > bestScore) {
+                        bestScore = score;
+                        move = i;
+                    }
+                }
+            }
+            return move;
+        }
+
+        function minimax(state, depth, isMaximizing) {
+            if (checkWin('O')) return 10 - depth;
+            if (checkWin('X')) return depth - 10;
+            if (checkTie()) return 0;
+            if (isMaximizing) {
+                let bestScore = -Infinity;
+                for (let i = 0; i < state.length; i++) {
+                    if (state[i] === '') {
+                        state[i] = 'O';
+                        let score = minimax(state, depth + 1, false);
+                        state[i] = '';
+                        bestScore = Math.max(score, bestScore);
+                    }
+                }
+                return bestScore;
+            } else {
+                let bestScore = Infinity;
+                for (let i = 0; i < state.length; i++) {
+                    if (state[i] === '') {
+                        state[i] = 'X';
+                        let score = minimax(state, depth + 1, true);
+                        state[i] = '';
+                        bestScore = Math.min(score, bestScore);
+                    }
+                }
+                return bestScore;
+            }
+        }
+
+        /**
+         * Check for win conditions for the given player symbol.
+         */
+        function checkWin(symbol) {
+            // Check rows and columns
+            for (let r = 0; r < boardSize; r++) {
+                let rowWin = true;
+                let colWin = true;
+                for (let c = 0; c < boardSize; c++) {
+                    if (gameState[r * boardSize + c] !== symbol) rowWin = false;
+                    if (gameState[c * boardSize + r] !== symbol) colWin = false;
+                }
+                if (rowWin || colWin) return true;
+            }
+            // Check diagonals
+            let diag1Win = true;
+            let diag2Win = true;
+            for (let i = 0; i < boardSize; i++) {
+                if (gameState[i * boardSize + i] !== symbol) diag1Win = false;
+                if (gameState[i * boardSize + (boardSize - 1 - i)] !== symbol) diag2Win = false;
+            }
+            return diag1Win || diag2Win;
+        }
+
+        /**
+         * Check for a tie (board full with no winner)
+         */
+        function checkTie() {
+            return gameState.every(cell => cell !== '');
+        }
+
+        /**
+         * End the current game. Update score, check for level ups, and display overlays.
+         * @param {boolean|null} didWin true if player won, false if lost, null if tie
+         */
+        function endGame(didWin) {
+            clearInterval(timerInterval);
+            gameActive = false;
+            // Cancel the order ready timer if the game ends early
+            clearTimeout(orderReadyTimeout);
+            // Determine points and update score
+            let points = 0;
+            const endMessageEl = document.getElementById('endMessage');
+            const progressEl = document.getElementById('progressInfo');
+            if (didWin === true) {
+                // Player won: award points, increment win count and show win message
+                points = 20;
+                winCount++;
+                showInfoMessage('ניצחת! +20 נקודות');
+                endMessageEl.innerText = 'ניצחת!';
+            } else if (didWin === false) {
+                // Player lost: small consolation points and show lose message
+                points = 5;
+                showInfoMessage('הפסדת... +5 נקודות');
+                endMessageEl.innerText = 'הפסדת...';
+            } else {
+                // Draw: no win counted, optional small points for participation, show draw message
+                points = 0;
+                showInfoMessage('תיקו!');
+                endMessageEl.innerText = 'תיקו!';
+                // Indicate that a draw does not count towards wins
+                progressEl.innerText = 'תיקו. לא נחשב לניצחונות';
+                document.getElementById('gameEndOverlay').style.display = 'flex';
+                return;
+            }
+            playerScore += points;
+            // Update the level progress bar with the new score
+            updateLevelUI();
+            // Check if reached level threshold (draws do not cause level ups)
+            let nextIndex = currentLevelIndex + 1;
+            if (nextIndex < levels.length && playerScore >= levels[nextIndex].threshold) {
+                currentLevelIndex = nextIndex;
+                // Level up notification in Hebrew. Keep the level name in English for clarity
+                // but wrap it with a Hebrew sentence.
+                showInfoMessage('עלית רמה! עכשיו אתה ב־' + levels[currentLevelIndex].name);
+                // Update level UI to reflect new level and reset progress bar
+                updateLevelUI();
+                // For demonstration, automatically continue to next game after a short delay
+                setTimeout(() => {
+                    continueGame();
+                }, 1500);
+            } else {
+                // Show game end overlay if not continuing automatically
+                // Update progress message based on current win count
+                progressEl.innerText = `ניצחון ${winCount % 3} מתוך 3!`;
+                document.getElementById('gameEndOverlay').style.display = 'flex';
+            }
+        }
+
+        /**
+         * Continue the game after finishing a round. Hides overlays and resets state.
+         */
+        function continueGame() {
+            document.getElementById('gameEndOverlay').style.display = 'none';
+            document.getElementById('gameScreen').style.display = 'none';
+            document.getElementById('mainScreen').style.display = 'flex';
+            // Reset chat
+            document.getElementById('chatMessages').innerHTML = '';
+            // Reset level-specific flags
+            isFastRound = false;
+            finalRoundTriggered = false;
+            // Hide level bar until next game
+            const lvlContainer = document.getElementById('levelContainer');
+            if (lvlContainer) lvlContainer.style.display = 'none';
+        }
+
+        /**
+         * When the kitchen calls your order number, show a semi-transparent overlay without ending the game.
+         */
+        function showOrderReady() {
+            document.getElementById('orderReadyOverlay').style.display = 'flex';
+            clearInterval(timerInterval);
+        }
+        function closeOrderReady() {
+            document.getElementById('orderReadyOverlay').style.display = 'none';
+            // Resume timer only if game is active and player's turn
+            if (gameActive && currentPlayer === 'X') startTimer();
+        }
+
+        /**
+         * Send an emoji in the chat; this updates the chat UI on both sides.
+         * @param {string} emoji The emoji character to send
+         */
+        function sendEmoji(emoji) {
+            const chat = document.getElementById('chatMessages');
+            const selfMsg = document.createElement('div');
+            selfMsg.className = 'self';
+            selfMsg.textContent = emoji;
+            chat.appendChild(selfMsg);
+            chat.scrollTop = chat.scrollHeight;
+            // Echo back from opponent after a short delay
+            setTimeout(() => {
+                const oppMsg = document.createElement('div');
+                oppMsg.className = 'opponent';
+                // Mirror the emoji or choose a generic response
+                oppMsg.textContent = emoji;
+                chat.appendChild(oppMsg);
+                chat.scrollTop = chat.scrollHeight;
+            }, 500);
+        }
+
+        /**
+         * Display toast notifications.  This function creates a temporary element and
+         * ensures that only one toast is visible at a time.
+         * @param {string} message Message to display
+         */
+        let currentToast = null;
+        function showToast(message) {
+            if (currentToast) {
+                currentToast.remove();
+            }
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            currentToast = toast;
+            toast.addEventListener('animationend', () => {
+                toast.remove();
+                currentToast = null;
+            });
+        }
+
+        /**
+         * Initialize avatar carousel track by duplicating the avatar list to allow infinite scroll.
+         */
+        function initAvatarCarousel() {
+            const track = document.getElementById('avatarTrack');
+            track.innerHTML = '';
+            const imagesToRender = avatarImages.concat(avatarImages);
+            imagesToRender.forEach(src => {
+                const img = document.createElement('img');
+                img.src = src;
+                img.alt = '';
+                // If the image fails to load (e.g. file missing), remove it from the DOM so
+                // broken icons do not appear in the carousel.
+                img.onerror = function() {
+                    this.remove();
+                };
+                track.appendChild(img);
+            });
+        }
+        // Initialize avatar carousel on page load
+        window.addEventListener('DOMContentLoaded', initAvatarCarousel);
+    </script>
 </body>
 </html>
